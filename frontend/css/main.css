@@ -444,13 +444,10 @@ button { font-family: inherit; }
 /* ---------- 10. FINAL CTA + FOOTER ---------- */
 .final-cta {
   position: relative;
-  background: linear-gradient(170deg, var(--color-highlight), var(--color-surface));
+  background: var(--color-text);
   padding: 76px 0;
   overflow: hidden;
 }
-.tape-final { position: absolute; top: -1px; width: 60px; height: 22px; background: rgba(238,222,220,0.9); border: 1px solid rgba(126,116,91,0.2); }
-.tape-final-left { left: 8%; transform: rotate(-8deg); }
-.tape-final-right { right: 8%; transform: rotate(6deg); }
 
 .final-cta-inner {
   position: relative;
