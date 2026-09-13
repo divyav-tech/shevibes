@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Board — Campus Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Archivo:wght@400;500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body class="app-body">
+
+<header class="app-header">
+  <div class="app-header-inner">
+    <a class="wordmark" href="dashboard.html">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <circle cx="10" cy="6" r="3" fill="#C45F62"/>
+        <circle cx="6" cy="11" r="3" fill="#B97D7B"/>
+        <circle cx="14" cy="11" r="3" fill="#DDD3C9"/>
+        <circle cx="10" cy="14" r="2.4" fill="#6F674F"/>
+      </svg>
+      Campus Board
+    </a>
+
+    <nav class="main-nav" id="app-nav">
+      <a href="dashboard.html" class="is-current">Home</a>
+      <a href="announcements.html">Announcements</a>
+      <a href="opportunities.html">Opportunities</a>
+      <a href="calendar.html">Calendar</a>
+      <a href="profile.html">My Profile</a>
+    </nav>
+
+    <div class="app-header-actions">
+      <div class="app-search">
+        <input type="search" id="global-search" placeholder="Search announcements, opportunities…" aria-label="Search Campus Board">
+        <div class="app-search-results" id="search-results" hidden></div>
+      </div>
+      <div class="app-notif">
+        <button class="notif-btn" id="notif-btn" aria-haspopup="true" aria-expanded="false" aria-label="Notifications">
+          🔔<span class="notif-dot" id="notif-dot" hidden></span>
+        </button>
+        <div class="notif-dropdown" id="notif-dropdown" hidden>
+          <div class="notif-dropdown-head">
+            <span>Notifications</span>
+            <button type="button" id="notif-mark-all">Mark all as read</button>
+          </div>
+          <div class="notif-list" id="notif-list"></div>
+        </div>
+      </div>
+      <a class="app-avatar" href="profile.html" id="app-avatar">S</a>
+      <button class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="app-nav" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="dash-main">
+
+  <section class="welcome">
+    <div>
+      <h1 id="welcome-heading">Good morning ✦</h1>
+      <p class="welcome-sub">Here's what's happening around your campus.</p>
+    </div>
+    <span class="welcome-tag" id="welcome-tag">Regular Student · 1st Year · CSE · Section A</span>
+  </section>
+
+  <section class="dash-section">
+    <div class="dash-section-head">
+      <h2>Needs Attention</h2>
+      <a class="dash-section-link" href="announcements.html">View all announcements →</a>
+    </div>
+    <div class="dash-grid" id="needs-attention-grid"></div>
+  </section>
+
+  <section class="dash-section">
+    <div class="dash-section-head">
+      <h2>For You</h2>
+      <a class="dash-section-link" href="opportunities.html">View all opportunities →</a>
+    </div>
+    <div class="dash-grid" id="for-you-grid"></div>
+  </section>
+
+  <section class="dash-section">
+    <div class="dash-section-head">
+      <h2>Upcoming</h2>
+      <a class="dash-section-link" href="calendar.html">Open calendar →</a>
+    </div>
+    <div class="dash-grid" id="upcoming-grid"></div>
+  </section>
+
+  <section class="dash-section">
+    <div class="dash-section-head"><h2>Quick Actions</h2></div>
+    <div class="quick-actions">
+      <a class="quick-action" href="announcements.html">
+        <span class="quick-action-icon">📣</span>
+        <span class="quick-action-label">View Announcements</span>
+        <span class="quick-action-count" id="qa-announcements-count">—</span>
+      </a>
+      <a class="quick-action" href="opportunities.html">
+        <span class="quick-action-icon">🎯</span>
+        <span class="quick-action-label">Explore Opportunities</span>
+        <span class="quick-action-count" id="qa-opportunities-count">—</span>
+      </a>
+      <a class="quick-action" href="calendar.html">
+        <span class="quick-action-icon">📅</span>
+        <span class="quick-action-label">Open Calendar</span>
+        <span class="quick-action-count" id="qa-calendar-count">—</span>
+      </a>
+      <a class="quick-action" href="profile.html?tab=saved">
+        <span class="quick-action-icon">🔖</span>
+        <span class="quick-action-label">Saved Items</span>
+        <span class="quick-action-count" id="qa-saved-count">—</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- CR-only tools, shown/hidden by dashboard.js based on stored role -->
+  <section class="cr-tools" id="cr-tools" hidden>
+    <h2>Class Tools</h2>
+    <div class="cr-tools-grid">
+      <button class="cr-tool-btn" type="button" id="cr-post-announcement">+ Post Announcement</button>
+      <button class="cr-tool-btn" type="button" id="cr-add-deadline">+ Add Deadline</button>
+      <button class="cr-tool-btn" type="button" id="cr-add-event">+ Add Class Event</button>
+      <a class="cr-tool-btn" href="announcements.html">Manage Class Updates</a>
+    </div>
+  </section>
+
+  <section class="pinned-strip">
+    <h2>Don't miss this week ✦</h2>
+    <div class="pinned-notes" id="pinned-notes"></div>
+  </section>
+
+</main>
+
+<!-- CR: Post Announcement modal -->
+<div class="cb-modal" id="post-modal" aria-hidden="true">
+  <div class="cb-modal-backdrop" data-close-modal></div>
+  <div class="cb-modal-panel" role="dialog" aria-modal="true" aria-labelledby="post-modal-title">
+    <button class="cb-modal-close" type="button" aria-label="Close" data-close-modal>×</button>
+    <h2 id="post-modal-title">Post Announcement</h2>
+    <label for="post-title">Announcement title</label>
+    <input id="post-title" type="text" placeholder="e.g. Practical file submission">
+    <label for="post-desc">Description</label>
+    <textarea id="post-desc" placeholder="What do students need to do?"></textarea>
+    <label for="post-category">Category</label>
+    <select id="post-category">
+      <option>Academic</option>
+      <option>Class</option>
+      <option>Society</option>
+      <option>General</option>
+      <option>Important</option>
+    </select>
+    <label for="post-deadline">Date / deadline</label>
+    <input id="post-deadline" type="date">
+    <label for="post-priority">Priority</label>
+    <select id="post-priority">
+      <option value="high">High</option>
+      <option value="medium" selected>Medium</option>
+      <option value="low">Low</option>
+    </select>
+    <div class="cb-modal-footer">
+      <button class="btn btn-ghost" type="button" data-close-modal>Cancel</button>
+      <button class="btn btn-primary" type="button" id="post-submit">Post Announcement</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/main.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>

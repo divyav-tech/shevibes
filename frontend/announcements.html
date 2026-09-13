@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Calendar — Campus Board</title>
+<title>Announcements — Campus Board</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Archivo:wght@400;500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
@@ -26,9 +26,9 @@
     </a>
     <nav class="main-nav" id="app-nav">
       <a href="dashboard.html">Home</a>
-      <a href="announcements.html">Announcements</a>
+      <a href="announcements.html" class="is-current">Announcements</a>
       <a href="opportunities.html">Opportunities</a>
-      <a href="calendar.html" class="is-current">Calendar</a>
+      <a href="calendar.html">Calendar</a>
       <a href="profile.html">My Profile</a>
     </nav>
     <div class="app-header-actions">
@@ -55,25 +55,31 @@
 
 <main class="dash-main">
   <div class="page-head">
-    <h1>Calendar</h1>
-    <p>Deadlines, exams, workshops and society events for your class and campus.</p>
+    <h1>Announcements</h1>
+    <p>Everything posted for your class and campus, in one feed.</p>
   </div>
 
-  <div class="calendar-tabs">
-    <button class="filter-chip is-active" id="tab-month" type="button">Month</button>
-    <button class="filter-chip" id="tab-upcoming" type="button">Upcoming</button>
+  <div class="filter-bar">
+    <input type="search" class="page-search" id="page-search" placeholder="Search announcements…" aria-label="Search announcements">
+    <div class="filter-chips" id="category-chips">
+      <button class="filter-chip is-active" data-category="All" type="button">All</button>
+      <button class="filter-chip" data-category="Academic" type="button">Academic</button>
+      <button class="filter-chip" data-category="Class" type="button">Class</button>
+      <button class="filter-chip" data-category="Society" type="button">Society</button>
+      <button class="filter-chip" data-category="General" type="button">General</button>
+      <button class="filter-chip" data-category="Important" type="button">Important</button>
+    </div>
+    <select class="sort-select" id="sort-select">
+      <option value="newest">Newest first</option>
+      <option value="deadline">Deadline soonest</option>
+      <option value="priority">Priority: high first</option>
+    </select>
   </div>
 
-  <div id="month-view">
-    <div class="calendar-grid" id="calendar-grid"></div>
-  </div>
-
-  <div id="upcoming-view" hidden>
-    <div class="upcoming-list" id="upcoming-list"></div>
-  </div>
+  <div class="results-grid" id="announcements-grid"></div>
 </main>
 
 <script src="js/main.js"></script>
-<script src="js/calendar.js"></script>
+<script src="js/announcements.js"></script>
 </body>
 </html>
