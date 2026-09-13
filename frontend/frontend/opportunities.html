@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Opportunities — Campus Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Archivo:wght@400;500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/dashboard.css">
+<link rel="stylesheet" href="css/pages.css">
+</head>
+<body class="app-body">
+
+<header class="app-header">
+  <div class="app-header-inner">
+    <a class="wordmark" href="dashboard.html">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <circle cx="10" cy="6" r="3" fill="#C45F62"/>
+        <circle cx="6" cy="11" r="3" fill="#B97D7B"/>
+        <circle cx="14" cy="11" r="3" fill="#DDD3C9"/>
+        <circle cx="10" cy="14" r="2.4" fill="#6F674F"/>
+      </svg>
+      Campus Board
+    </a>
+    <nav class="main-nav" id="app-nav">
+      <a href="dashboard.html">Home</a>
+      <a href="announcements.html">Announcements</a>
+      <a href="opportunities.html" class="is-current">Opportunities</a>
+      <a href="calendar.html">Calendar</a>
+      <a href="profile.html">My Profile</a>
+    </nav>
+    <div class="app-header-actions">
+      <div class="app-search">
+        <input type="search" id="global-search" placeholder="Search announcements, opportunities…" aria-label="Search Campus Board">
+        <div class="app-search-results" id="search-results" hidden></div>
+      </div>
+      <div class="app-notif">
+        <button class="notif-btn" id="notif-btn" aria-haspopup="true" aria-expanded="false" aria-label="Notifications">
+          🔔<span class="notif-dot" id="notif-dot" hidden></span>
+        </button>
+        <div class="notif-dropdown" id="notif-dropdown" hidden>
+          <div class="notif-dropdown-head"><span>Notifications</span><button type="button" id="notif-mark-all">Mark all as read</button></div>
+          <div class="notif-list" id="notif-list"></div>
+        </div>
+      </div>
+      <a class="app-avatar" href="profile.html" id="app-avatar">S</a>
+      <button class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="app-nav" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="dash-main">
+  <div class="page-head">
+    <h1>Opportunities</h1>
+    <p>Hackathons, workshops, competitions, scholarships and more — across campus.</p>
+  </div>
+
+  <div class="filter-bar">
+    <input type="search" class="page-search" id="page-search" placeholder="Search opportunities…" aria-label="Search opportunities">
+    <div class="filter-chips" id="category-chips">
+      <button class="filter-chip is-active" data-category="All" type="button">All</button>
+      <button class="filter-chip" data-category="Tech" type="button">Tech</button>
+      <button class="filter-chip" data-category="Competitions" type="button">Competitions</button>
+      <button class="filter-chip" data-category="Scholarships" type="button">Scholarships</button>
+      <button class="filter-chip" data-category="Workshops" type="button">Workshops</button>
+      <button class="filter-chip" data-category="Volunteering" type="button">Volunteering</button>
+      <button class="filter-chip" data-category="Events" type="button">Events</button>
+      <button class="filter-chip" data-category="Societies" type="button">Societies</button>
+    </div>
+  </div>
+
+  <div class="section-divider">
+    <h2>Recommended for you</h2>
+    <p>Based on the interests you picked when you built your board.</p>
+  </div>
+  <div class="results-grid" id="recommended-grid"></div>
+
+  <div class="section-divider">
+    <h2>All opportunities</h2>
+  </div>
+  <div class="results-grid" id="opportunities-grid"></div>
+</main>
+
+<script src="js/main.js"></script>
+<script src="js/opportunities.js"></script>
+</body>
+</html>
