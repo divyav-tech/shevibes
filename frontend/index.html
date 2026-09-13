@@ -292,12 +292,31 @@
         <span class="progress-dot"></span>
         <span class="progress-line"></span>
         <span class="progress-dot"></span>
+        <span class="progress-line"></span>
+        <span class="progress-dot"></span>
       </div>
 
-      <!-- Step 1 — Role -->
+      <!-- Step 1 — Name -->
       <div class="onboarding-step is-active" data-step="1">
+        <span class="onboarding-kicker">nice to meet you ✦</span>
+        <h2 id="onboarding-title">What should we call you?</h2>
+        <p class="onboarding-intro">Your name shows up on your board and your little campus corner.</p>
+
+        <div class="class-field">
+          <label for="field-name">Your name</label>
+          <input type="text" id="field-name" placeholder="e.g. Divya" autocomplete="given-name">
+        </div>
+
+        <div class="onboarding-footer">
+          <span class="step-note">01 / 05</span>
+          <button class="onboarding-next btn btn-primary" type="button" data-next disabled>Next →</button>
+        </div>
+      </div>
+
+      <!-- Step 2 — Role -->
+      <div class="onboarding-step" data-step="2">
         <span class="onboarding-kicker">let's make it yours ✦</span>
-        <h2 id="onboarding-title">How will you use Campus Board?</h2>
+        <h2>How will you use Campus Board?</h2>
         <p class="onboarding-intro">This changes what your board can do — CRs get a few extra tools.</p>
 
         <div class="choice-grid">
@@ -314,13 +333,14 @@
         </div>
 
         <div class="onboarding-footer">
-          <span class="step-note">01 / 04</span>
+          <button class="onboarding-back btn btn-ghost" type="button" data-back>← Back</button>
+          <span class="step-note">02 / 05</span>
           <button class="onboarding-next btn btn-primary" type="button" data-next disabled>Next →</button>
         </div>
       </div>
 
-      <!-- Step 2 — Class -->
-      <div class="onboarding-step" data-step="2">
+      <!-- Step 3 — Class -->
+      <div class="onboarding-step" data-step="3">
         <span class="onboarding-kicker">so we can match your section</span>
         <h2>What class are you in?</h2>
         <p class="onboarding-intro">Announcements and deadlines get matched against this.</p>
@@ -358,13 +378,13 @@
 
         <div class="onboarding-footer">
           <button class="onboarding-back btn btn-ghost" type="button" data-back>← Back</button>
-          <span class="step-note">02 / 04</span>
+          <span class="step-note">03 / 05</span>
           <button class="onboarding-next btn btn-primary" type="button" data-next>Next →</button>
         </div>
       </div>
 
-      <!-- Step 3 — Interests -->
-      <div class="onboarding-step" data-step="3">
+      <!-- Step 4 — Interests -->
+      <div class="onboarding-step" data-step="4">
         <span class="onboarding-kicker">a few little priorities</span>
         <h2>What do you care about?</h2>
         <p class="onboarding-intro">Pick everything you want your board to keep an eye on.</p>
@@ -386,13 +406,13 @@
 
         <div class="onboarding-footer">
           <button class="onboarding-back btn btn-ghost" type="button" data-back>← Back</button>
-          <span class="step-note">03 / 04</span>
+          <span class="step-note">04 / 05</span>
           <button class="onboarding-next btn btn-primary" type="button" data-next disabled>Build my board →</button>
         </div>
       </div>
 
-      <!-- Step 4 -->
-      <div class="onboarding-step" data-step="4">
+      <!-- Step 5 -->
+      <div class="onboarding-step" data-step="5">
         <div class="board-ready-doodle" aria-hidden="true">✦</div>
         <span class="onboarding-kicker">your little campus corner</span>
         <h2>Your board is ready.</h2>
@@ -402,7 +422,8 @@
           <div class="generated-board-header">
             <div>
               <span class="generated-label">MY CAMPUS BOARD</span>
-              <h3><span data-class-label>1st Year · CSE · Section A</span></h3>
+              <h3><span data-name-label>Divya</span></h3>
+              <p class="generated-sub-class"><span data-class-label>1st Year · CSE · Section A</span></p>
               <p class="generated-sub"><span data-role-label>Regular Student</span> · <span data-interest-count>0</span> interests</p>
             </div>
             <span class="generated-date">12 SEPT ✦</span>

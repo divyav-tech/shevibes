@@ -48,11 +48,8 @@
 
   var priorityWeight = { high: 0, medium: 1, low: 2 };
 
-  function toneFor(priority) {
-    return priority === "high" ? "is-urgent" : priority === "medium" ? "is-foryou" : "is-latest";
-  }
-
   function render() {
+    allAnnouncements = CB.data.getAllAnnouncements();
     var q = state.query.trim().toLowerCase();
     var filtered = allAnnouncements.filter(function (a) {
       var matchesCategory = state.category === "All" || a.category === state.category;
@@ -67,7 +64,7 @@
     });
 
     var cards = filtered.map(function (a) {
-      return Object.assign({}, a, { _tone: toneFor(a.priority) });
+      return Object.assign({}, a, { _tone: CB.util.toneForCategory(a.category) });
     });
 
     var container = document.getElementById("announcements-grid");
@@ -91,7 +88,8 @@
           '<span>Deadline: <strong>' + CB.util.formatDate(item.deadline) + '</strong></span>' +
           '<span>For: <strong>' + item.forClass + '</strong></span>' +
           '<span>Source: <strong>' + item.source + '</strong></span>' +
-        '</div>';
+        '</div>' +
+        (item.aiGenerated ? '<span class="ai-badge">AI sorted this</span>' : '');
       card.addEventListener("click", function (e) {
         if (e.target.closest("[data-save]")) return;
         item.savedType = "announcement";

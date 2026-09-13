@@ -17,17 +17,48 @@
 
 /* ---------- 1. VARIABLES & RESETS ---------- */
 :root {
-  /* SheVibes palette — brighter, warmer, more playful */
-  --color-bg: #FFF9E8;
-  --color-bg-alt: #DDD3C9;
-  --color-surface: #F7D8D8;
-  --color-text: #362B1D;
-  --color-text-muted: #6F674F;
-  --color-accent: #C45F62;
-  --color-accent-2: #B97D7B;
-  --color-highlight: #F3B9B8;
-  --color-positive: #A8C45A;
-  --color-positive-deep: #575527;
+  /* ---- Campus Board scrapbook palette (canonical hexes) ---- */
+  --color-cream: #F4F3E1;
+  --color-tan: #DDD3C9;
+  --color-blush: #EEDEDC;
+  --color-ink: #362B1D;
+  --color-taupe: #7E745B;
+  --color-mauve: #B68680;
+  --color-rose: #B97D7B;
+  --color-pink: #ECC4C3;
+  --color-sage: #92BE5E;
+  --color-olive: #575527;
+
+  /* legacy variable names kept so the rest of the file keeps working —
+     they now resolve to the canonical hexes above instead of the old,
+     much beiger set. */
+  --color-bg: var(--color-cream);
+  --color-bg-alt: var(--color-tan);
+  --color-surface: var(--color-blush);
+  --color-text: var(--color-ink);
+  --color-text-muted: var(--color-taupe);
+  --color-accent: var(--color-rose);
+  --color-accent-2: var(--color-mauve);
+  --color-highlight: var(--color-pink);
+  --color-positive: var(--color-sage);
+  --color-positive-deep: var(--color-olive);
+
+  /* semantic "paper" tones used for colored blocks across the app —
+     see PAPER TONES section near the end of this file. */
+  --tone-academic-bg: var(--color-cream);
+  --tone-academic-border: var(--color-olive);
+  --tone-important-bg: var(--color-rose);
+  --tone-important-fg: var(--color-cream);
+  --tone-opportunity-bg: var(--color-sage);
+  --tone-opportunity-fg: var(--color-ink);
+  --tone-event-bg: var(--color-sage);
+  --tone-society-bg: var(--color-mauve);
+  --tone-society-fg: var(--color-cream);
+  --tone-personal-bg: var(--color-blush);
+  --tone-cr-bg: var(--color-rose);
+  --tone-cr-fg: var(--color-cream);
+  --tone-saved-bg: var(--color-pink);
+  --tone-general-bg: var(--color-tan);
 
   --font-display: "Fraunces", Georgia, serif;
   --font-body: "Archivo", -apple-system, BlinkMacSystemFont, sans-serif;
@@ -1740,6 +1771,12 @@ body.modal-open {
   font-weight: 500;
 }
 
+.generated-sub-class {
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
 .generated-date {
   font: 600 0.75rem var(--font-hand);
   color: var(--color-text-muted);
@@ -1854,4 +1891,625 @@ body.modal-open {
   .onboarding-footer-final .btn {
     width: 100%;
   }
+}
+/* =========================================================
+   13. PAPER TONES — colored-block system
+   Used by info-card (dashboard/announcements/opportunities),
+   calendar sticky notes, and any "block of color" component.
+   Category → tone mapping lives in JS (CB.util.toneForCategory).
+   ========================================================= */
+
+.info-card.tone-academic {
+  background: var(--tone-academic-bg);
+  border: 2px solid var(--tone-academic-border);
+  border-left-width: 6px;
+  color: var(--color-ink);
+}
+.info-card.tone-important {
+  background: var(--tone-important-bg);
+  border-left: 6px solid var(--color-olive);
+  color: var(--tone-important-fg);
+}
+.info-card.tone-important .info-card-tag,
+.info-card.tone-important .info-card-title,
+.info-card.tone-important .info-card-desc,
+.info-card.tone-important .info-card-meta,
+.info-card.tone-important .info-card-meta strong { color: var(--tone-important-fg); }
+.info-card.tone-important .info-card-desc { color: rgba(244, 243, 225, 0.86); }
+.info-card.tone-important .info-card-tag { background: rgba(244, 243, 225, 0.2); color: var(--tone-important-fg); }
+
+.info-card.tone-opportunity {
+  background:  rgb(247, 247, 223);
+  border-left: 6px solid var(--color-olive);
+  color: var(--tone-opportunity-fg);
+}
+.info-card.tone-opportunity .info-card-tag { background: rgba(54, 43, 29, 0.12); }
+
+.info-card.tone-event {
+  background:  var(--color-blush);
+  border-left: 6px solid var(--color-olive);
+  color: var(--color-ink);
+}
+.info-card.tone-event .info-card-tag { background: rgba(54, 43, 29, 0.12); }
+
+.info-card.tone-society {
+  background: var(--tone-society-bg);
+  border-left: 6px solid var(--color-olive);
+  color: var(--tone-society-fg);
+}
+.info-card.tone-society .info-card-tag { background: rgba(244, 243, 225, 0.2); color: var(--tone-society-fg); }
+.info-card.tone-society .info-card-desc,
+.info-card.tone-society .info-card-meta,
+.info-card.tone-society .info-card-meta strong { color: var(--tone-society-fg); }
+
+.info-card.tone-personal {
+  background: var(--tone-personal-bg);
+  border-left: 6px solid var(--color-mauve);
+  color: var(--color-ink);
+}
+
+.info-card.tone-rose {
+  background: var(--color-pink);
+  border-left: 6px solid var(--color-rose);
+  color: var(--color-ink);
+}
+
+.info-card.tone-cream {
+  background: var(--color-cream);
+  border: 2px dashed var(--color-tan);
+  border-left: 6px solid var(--color-olive);
+  color: var(--color-ink);
+}
+
+/* AI trust badge — shown on any card whose data came from the AI parser */
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-hand);
+  font-size: 0.92rem;
+  color: var(--color-olive);
+  margin-top: 8px;
+}
+.ai-badge::before { content: "✦"; }
+
+/* generic handwritten microcopy line */
+.hand-note {
+  font-family: var(--font-hand);
+  font-size: 1.05rem;
+  color: var(--color-taupe);
+}
+
+/* =========================================================
+   14. AI ANNOUNCEMENT FLOW — compose / processing / result
+   Used on dashboard.html inside #post-modal.
+   ========================================================= */
+
+.ai-flow-stage { display: none; }
+.ai-flow-stage.is-active { display: block; }
+
+.ai-flow-kicker {
+  font-family: var(--font-hand);
+  font-size: 1.15rem;
+  color: var(--color-taupe);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.ai-compose-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 500;
+  margin: 0 0 4px;
+}
+
+.ai-compose-sub {
+  font-family: var(--font-hand);
+  font-size: 1.1rem;
+  color: var(--color-taupe);
+  margin: 0 0 16px;
+}
+
+.ai-compose-paper {
+  background: var(--color-cream);
+  border: 2px dashed var(--color-tan);
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.ai-compose-textarea {
+  width: 100%;
+  min-height: 150px;
+  border: none;
+  background: transparent;
+  resize: vertical;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-ink);
+  padding: 14px 16px;
+}
+.ai-compose-textarea:focus-visible { outline: none; }
+
+.ai-understand-btn {
+  margin-top: 18px;
+  width: 100%;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+/* processing state */
+.ai-processing {
+  text-align: center;
+  padding: 20px 10px 6px;
+}
+.ai-processing-title {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  margin-bottom: 18px;
+}
+.ai-processing-orb {
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--color-pink), var(--color-rose) 70%);
+  box-shadow: 0 0 0 6px rgba(185, 125, 123, 0.18);
+  animation: ai-orb-pulse 1.4s ease-in-out infinite;
+}
+@keyframes ai-orb-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 6px rgba(185, 125, 123, 0.18); }
+  50% { transform: scale(1.12); box-shadow: 0 0 0 12px rgba(185, 125, 123, 0.08); }
+}
+.ai-processing-steps {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  max-width: 260px;
+  text-align: left;
+  font-size: 0.92rem;
+  color: var(--color-taupe);
+}
+.ai-processing-steps li {
+  padding: 7px 0 7px 26px;
+  position: relative;
+  opacity: 0.45;
+  transition: opacity 0.25s ease, color 0.25s ease;
+}
+.ai-processing-steps li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 11px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-taupe);
+}
+.ai-processing-steps li.is-done {
+  opacity: 1;
+  color: var(--color-ink);
+  font-weight: 600;
+}
+.ai-processing-steps li.is-done::before {
+  background: var(--color-sage);
+  border-color: var(--color-olive);
+}
+
+/* result / review card */
+.ai-result-title {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  margin-bottom: 4px;
+}
+.ai-result-card {
+  position: relative;
+  background: var(--color-cream);
+  border-radius: 10px;
+  padding: 20px 22px;
+  margin-top: 14px;
+  box-shadow: var(--shadow-paper-soft);
+  border-left: 6px solid var(--color-olive);
+  transform: rotate(-0.4deg);
+}
+.ai-result-heading {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 14px;
+  padding-right: 70px;
+}
+.ai-result-field { margin-bottom: 13px; }
+.ai-result-field label {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-taupe);
+  margin-bottom: 4px;
+}
+.ai-result-field input,
+.ai-result-field select {
+  width: 100%;
+  border: none;
+  border-bottom: 1.5px dotted rgba(87, 85, 39, 0.3);
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 0.94rem;
+  color: var(--color-ink);
+  padding: 3px 2px;
+}
+.ai-result-field input:disabled,
+.ai-result-field select:disabled { color: var(--color-ink); opacity: 1; -webkit-text-fill-color: var(--color-ink); }
+.ai-result-field.is-editing input,
+.ai-result-field.is-editing select {
+  border-bottom: 1.5px solid var(--color-rose);
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 4px;
+}
+.ai-result-field input:not(:disabled):focus-visible { outline: none; }
+.ai-priority-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.ai-priority-pill.priority-high { background: var(--color-rose); color: var(--color-cream); }
+.ai-priority-pill.priority-medium { background: var(--color-pink); color: var(--color-ink); }
+.ai-priority-pill.priority-low { background: var(--color-tan); color: var(--color-ink); }
+.ai-result-checkbox { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
+.ai-result-checkbox input { width: auto; }
+.ai-result-not-specified { color: var(--color-taupe); font-style: italic; }
+.ai-trust-line {
+  margin-top: 14px;
+  font-family: var(--font-hand);
+  font-size: 1rem;
+  color: var(--color-olive);
+}
+.ai-flow-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+/* =========================================================
+   15. POLAROID UPLOAD WIDGET
+   ========================================================= */
+
+.polaroid-upload {
+  cursor: pointer;
+  border: none;
+  padding: 8px 8px 26px;
+  background: #fff;
+}
+.polaroid-upload .photo-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-blush);
+  overflow: hidden;
+}
+.polaroid-upload .photo-block-empty-label {
+  font-family: var(--font-hand);
+  font-size: 0.95rem;
+  color: var(--color-taupe);
+  text-align: center;
+  padding: 6px;
+}
+.polaroid-upload .photo-block img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.polaroid-caption {
+  display: block;
+  text-align: center;
+  font-family: var(--font-hand);
+  font-size: 0.95rem;
+  color: var(--color-taupe);
+  margin-top: 6px;
+}
+
+.polaroid-modal-panel { max-width: 360px; text-align: center; }
+.polaroid-modal-panel h2 { font-family: var(--font-hand); font-size: 1.6rem; font-weight: 600; margin-bottom: 6px; }
+.polaroid-modal-preview {
+  width: 160px;
+  height: 160px;
+  margin: 14px auto;
+  border-radius: 6px;
+  background: var(--color-blush);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: var(--font-hand);
+  color: var(--color-taupe);
+}
+.polaroid-modal-preview img { width: 100%; height: 100%; object-fit: cover; }
+.polaroid-modal-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+
+/* =========================================================
+   16. CALENDAR — month nav + scrapbook sticky notes
+   ========================================================= */
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  margin-bottom: 22px;
+}
+.calendar-nav-btn {
+  background: var(--color-blush);
+  border: 2px solid var(--color-tan);
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: var(--color-ink);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.calendar-nav-btn:hover { transform: translateY(-2px); background: var(--color-pink); }
+.calendar-nav-label {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 500;
+  min-width: 210px;
+  text-align: center;
+}
+
+.calendar-cell {
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.calendar-cell:hover:not(.is-empty) { background: var(--color-blush); }
+.calendar-cell.is-today .cell-date {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-rose);
+  color: var(--color-cream);
+}
+.calendar-cell-add-hint {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 0.7rem;
+  color: var(--color-taupe);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.calendar-cell:hover .calendar-cell-add-hint { opacity: 0.7; }
+
+/* sticky note items inside a calendar cell */
+.cal-note {
+  display: block;
+  margin-top: 5px;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  line-height: 1.3;
+  cursor: pointer;
+  text-align: left;
+  white-space: normal;
+}
+.cal-note-pill {
+  padding: 3px 7px;
+  background: var(--color-tan);
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cal-note-pill.tone-deadline { background: var(--color-rose); color: var(--color-cream); }
+.cal-note-pill.tone-exam { background: var(--color-rose); color: var(--color-cream); }
+.cal-note-pill.tone-event { background: var(--color-sage); color: var(--color-ink); }
+.cal-note-pill.tone-workshop,
+.cal-note-pill.tone-society,
+.cal-note-pill.tone-competition { background: var(--color-sage); color: var(--color-ink); }
+.cal-note-pill.tone-mynote { background: var(--color-blush); color: var(--color-ink); border: 1px dashed var(--color-mauve); }
+
+.cal-sticky {
+  position: relative;
+  padding: 10px 10px 9px;
+  box-shadow: var(--shadow-paper-soft);
+  transform: rotate(var(--rot, -1.2deg));
+  font-size: 0.72rem;
+}
+.cal-sticky.tone-deadline,
+.cal-sticky.tone-exam { background: var(--color-rose); color: var(--color-cream); }
+.cal-sticky.tone-event { background: var(--color-sage); color: var(--color-ink); }
+.cal-sticky.tone-workshop,
+.cal-sticky.tone-society,
+.cal-sticky.tone-competition { background: var(--color-sage); color: var(--color-ink); }
+.cal-sticky.tone-academic { background: var(--color-cream); color: var(--color-ink); border: 1.5px solid var(--color-olive); }
+.cal-sticky.tone-mynote { background: var(--color-blush); color: var(--color-ink); }
+.cal-sticky-tag {
+  display: block;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+  opacity: 0.85;
+}
+.cal-sticky-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.85rem;
+  line-height: 1.25;
+  margin-bottom: 2px;
+}
+.cal-sticky .clip,
+.cal-sticky .pin { z-index: 3; }
+
+.calendar-grid { grid-auto-rows: minmax(96px, auto); }
+.calendar-cell { min-height: 96px; }
+
+/* "Add to this day" modal */
+.add-day-modal-panel { max-width: 380px; }
+.add-day-title { font-family: var(--font-hand); font-size: 1.6rem; margin-bottom: 2px; }
+.add-day-date { color: var(--color-taupe); font-size: 0.85rem; margin-bottom: 14px; }
+.add-day-type-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 4px; }
+.add-day-type-btn {
+  background: var(--color-tan);
+  border: none;
+  border-radius: 16px;
+  padding: 6px 13px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--color-ink);
+}
+.add-day-type-btn.is-active { background: var(--color-rose); color: var(--color-cream); }
+.day-notes-existing { margin-top: 18px; display: flex; flex-direction: column; gap: 8px; }
+.day-notes-existing-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-blush);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+}
+.day-notes-existing-item button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-rose);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .calendar-nav-label { min-width: 0; font-size: 1.15rem; }
+  .cal-sticky { font-size: 0.66rem; }
+}
+
+/* =========================================================
+   17. CALENDAR STICKY WALL — large, genuinely readable notes
+   ========================================================= */
+
+.cal-sticky-wall {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 26px 22px;
+  padding: 6px 6px 20px;
+}
+
+.cal-sticky-big {
+  position: relative;
+  width: 220px;
+  min-height: 150px;
+  padding: 20px 18px 16px;
+  border-radius: 3px;
+  box-shadow: var(--shadow-paper);
+  transform: rotate(var(--rot, -2deg));
+  transition: transform 0.18s ease;
+  cursor: pointer;
+}
+.cal-sticky-big:hover { transform: rotate(0deg) translateY(-3px); }
+
+.cal-sticky-big.tone-deadline,
+.cal-sticky-big.tone-exam { background: var(--color-rose); color: var(--color-cream); }
+.cal-sticky-big.tone-event { background: var(--color-sage); color: var(--color-ink); }
+.cal-sticky-big.tone-workshop,
+.cal-sticky-big.tone-society,
+.cal-sticky-big.tone-competition { background: var(--color-sage); color: var(--color-ink); }
+.cal-sticky-big.tone-mynote { background: var(--color-blush); color: var(--color-ink); }
+
+.cal-sticky-big-tag {
+  display: inline-block;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.12);
+  margin-bottom: 10px;
+}
+.cal-sticky-big-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+  line-height: 1.28;
+  margin-bottom: 8px;
+}
+.cal-sticky-big-meta {
+  font-size: 0.78rem;
+  opacity: 0.9;
+}
+.cal-sticky-big-mynote-label {
+  font-family: var(--font-hand);
+  font-size: 1rem;
+  display: block;
+  margin-bottom: 4px;
+}
+
+@media (max-width: 600px) {
+  .cal-sticky-big { width: 100%; }
+}
+
+/* =========================================================
+   18. POLAROID ADD BUTTON + BIGGER PROFILE POLAROID
+   ========================================================= */
+
+.polaroid-add {
+  width: 108px;
+  min-height: 100px;
+  border: 2px dashed var(--color-tan);
+  border-radius: 4px;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  color: var(--color-taupe);
+  font-family: var(--font-hand);
+  font-size: 0.92rem;
+  align-self: flex-start;
+  transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+.polaroid-add:hover {
+  background: var(--color-blush);
+  border-color: var(--color-rose);
+  transform: translateY(-2px);
+}
+.polaroid-add-icon {
+  font-size: 1.7rem;
+  line-height: 1;
+  color: var(--color-rose);
+  font-family: var(--font-body);
+  font-weight: 400;
+}
+
+.polaroid-lg {
+  width: 190px;
+  padding: 10px 10px 30px;
+  flex-shrink: 0;
+}
+.polaroid-lg .photo-block { height: 175px; }
+.polaroid-lg .polaroid-caption { font-size: 1rem; }
+
+.profile-photo-row {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.profile-photo-info { flex: 1; min-width: 160px; }
+
+@media (max-width: 480px) {
+  .profile-photo-row { justify-content: center; text-align: center; }
+  .profile-photo-info { text-align: center; }
 }

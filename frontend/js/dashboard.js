@@ -6,16 +6,18 @@
   "use strict";
 
   if (!CB.initAppHeader()) return; // redirects to index.html if no profile
+  CB.ui.initPolaroid();
+  CB.ui.initPolaroidAdder(document.getElementById("campus-corner-polaroids"), "dashboard", document.getElementById("campus-corner-add"));
 
   var profile = CB.storage.getProfile();
   var announcements = CB.data.getAllAnnouncements();
   var opportunities = CB.data.opportunities;
-  var events = CB.data.events;
   var classLabel = profile.year + " · " + profile.branch + " · Section " + profile.section;
 
   var hour = new Date().getHours();
   var greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  document.getElementById("welcome-heading").textContent = greeting + " ✦";
+  var firstName = (profile.name || "").trim().split(/\s+/)[0];
+  document.getElementById("welcome-heading").textContent = greeting + (firstName ? ", " + firstName : "") + " ✦";
   document.getElementById("welcome-tag").textContent = profile.role + " · " + classLabel;
 
   function relevantToClass(item) {
@@ -31,17 +33,18 @@
 
   function renderAll() {
     announcements = CB.data.getAllAnnouncements();
+    var events = CB.data.getAllEvents();
 
     var needsAttention = announcements
       .filter(relevantToClass)
       .filter(function (a) { return a.priority === "high"; })
       .sort(function (a, b) { return (a.deadline || "9999").localeCompare(b.deadline || "9999"); })
       .slice(0, 4);
-    CB.ui.renderInfoCards("needs-attention-grid", needsAttention, "announcement", "is-urgent");
+    CB.ui.renderInfoCards("needs-attention-grid", needsAttention, "announcement", "tone-important");
 
     var forYou = opportunities.filter(function (o) { return CB.util.matchesInterests(o.category, profile.interests); }).slice(0, 4);
     if (!forYou.length) forYou = opportunities.slice(0, 4);
-    CB.ui.renderInfoCards("for-you-grid", forYou.map(toOpportunityCard), "opportunity", "is-foryou");
+    CB.ui.renderInfoCards("for-you-grid", forYou.map(toOpportunityCard), "opportunity", "tone-opportunity");
 
     var upcomingItems = events
       .filter(relevantToClass)
@@ -49,9 +52,14 @@
       .sort(function (a, b) { return a.date.localeCompare(b.date); })
       .slice(0, 4)
       .map(function (e) {
-        return { id: e.id, title: e.title, description: typeLabel(e.type) + " · " + CB.util.formatDate(e.date), category: typeLabel(e.type), deadline: e.date, source: "Campus Calendar", venue: "Not specified" };
+        return {
+          id: e.id, title: e.title,
+          description: typeLabel(e.type) + " · " + CB.util.formatDate(e.date) + (e.time ? " · " + e.time : ""),
+          category: typeLabel(e.type), deadline: e.date, source: "Campus Calendar",
+          venue: e.venue || "Not specified", aiGenerated: !!e.aiGenerated
+        };
       });
-    CB.ui.renderInfoCards("upcoming-grid", upcomingItems, "event", "is-latest");
+    CB.ui.renderInfoCards("upcoming-grid", upcomingItems, "event", "tone-event");
 
     document.getElementById("qa-announcements-count").textContent = announcements.length + " total";
     document.getElementById("qa-opportunities-count").textContent = opportunities.length + " open";
@@ -75,59 +83,150 @@
 
   renderAll();
 
-  /* ---------------- CR tools ---------------- */
+  /* ---------------- CR tools: natural-language AI announcement flow ---------------- */
 
   if (profile.role === "Class Representative") {
     document.getElementById("cr-tools").hidden = false;
 
     var postModal = document.getElementById("post-modal");
-    document.querySelectorAll("#post-modal [data-close-modal]").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        postModal.classList.remove("is-open");
-        document.body.classList.remove("modal-open");
+    var rawInput = document.getElementById("ai-raw-input");
+    var understandBtn = document.getElementById("ai-understand-btn");
+    var editBtn = document.getElementById("ai-edit-btn");
+    var postBtn = document.getElementById("ai-post-btn");
+    var processingSteps = Array.prototype.slice.call(document.querySelectorAll("#ai-processing-steps li"));
+
+    var fields = {
+      subject: document.getElementById("ai-field-subject"),
+      action: document.getElementById("ai-field-action"),
+      deadline: document.getElementById("ai-field-deadline"),
+      time: document.getElementById("ai-field-time"),
+      venue: document.getElementById("ai-field-venue"),
+      category: document.getElementById("ai-field-category"),
+      priority: document.getElementById("ai-field-priority"),
+      klass: document.getElementById("ai-field-class"),
+      calendar: document.getElementById("ai-field-calendar")
+    };
+    var resultTitleDisplay = document.getElementById("ai-result-title-display");
+    var currentParsed = null;
+    var processingTimer = null;
+
+    function setStage(stage) {
+      document.querySelectorAll("#post-modal .ai-flow-stage").forEach(function (el) {
+        el.classList.toggle("is-active", el.dataset.flowStage === stage);
       });
-    });
+    }
+
+    function resetFlow() {
+      clearTimeout(processingTimer);
+      rawInput.value = "";
+      currentParsed = null;
+      processingSteps.forEach(function (li) { li.classList.remove("is-done"); });
+      setStage("compose");
+    }
 
     function openPostModal() {
+      resetFlow();
       postModal.classList.add("is-open");
       document.body.classList.add("modal-open");
+      setTimeout(function () { rawInput.focus(); }, 50);
     }
+    function closePostModal() {
+      postModal.classList.remove("is-open");
+      document.body.classList.remove("modal-open");
+    }
+
+    document.querySelectorAll("#post-modal [data-close-modal]").forEach(function (btn) {
+      btn.addEventListener("click", closePostModal);
+    });
 
     document.getElementById("cr-post-announcement").addEventListener("click", openPostModal);
     document.getElementById("cr-add-deadline").addEventListener("click", function () {
-      document.getElementById("post-category").value = "Academic";
       openPostModal();
+      rawInput.placeholder = "e.g. Data Structures assignment 3 is due Friday. Submit on the portal by 6 PM.";
     });
     document.getElementById("cr-add-event").addEventListener("click", function () {
-      document.getElementById("post-category").value = "Class";
       openPostModal();
+      rawInput.placeholder = "e.g. Class shifts to Room 108 tomorrow at 2 PM instead of the usual slot.";
     });
 
-    document.getElementById("post-submit").addEventListener("click", function () {
-      var title = document.getElementById("post-title").value.trim();
-      var desc = document.getElementById("post-desc").value.trim();
-      if (!title || !desc) {
-        CB.util.toast("Please add a title and description");
+    function fillResultFields(parsed) {
+      resultTitleDisplay.textContent = parsed.title;
+      fields.subject.value = parsed.subject || "";
+      fields.subject.placeholder = "Not specified";
+      fields.action.value = parsed.action || "";
+      fields.action.placeholder = "Not specified";
+      fields.deadline.value = parsed.deadline || "";
+      fields.time.value = parsed.time || "";
+      fields.venue.value = parsed.venue || "";
+      fields.category.value = parsed.category;
+      fields.priority.value = parsed.priority;
+      fields.klass.value = classLabel;
+      fields.calendar.checked = parsed.add_to_calendar;
+    }
+
+    function setEditable(editable) {
+      Object.keys(fields).forEach(function (key) {
+        fields[key].disabled = !editable;
+        var wrapper = fields[key].closest(".ai-result-field");
+        if (wrapper) wrapper.classList.toggle("is-editing", editable);
+      });
+    }
+
+    understandBtn.addEventListener("click", function () {
+      var text = rawInput.value.trim();
+      if (!text) {
+        CB.util.toast("Type what happened first");
         return;
       }
-      CB.storage.addCrAnnouncement({
-        id: "cr-" + Date.now(),
-        title: title,
-        description: desc,
-        category: document.getElementById("post-category").value,
-        date: new Date().toISOString().slice(0, 10),
-        deadline: document.getElementById("post-deadline").value || null,
-        source: classLabel + " CR",
-        priority: document.getElementById("post-priority").value,
-        forClass: classLabel,
-        venue: "Not specified"
+      setStage("processing");
+      processingSteps.forEach(function (li) { li.classList.remove("is-done"); });
+
+      var stepDelay = 420;
+      processingSteps.forEach(function (li, i) {
+        setTimeout(function () { li.classList.add("is-done"); }, stepDelay * (i + 1));
       });
-      postModal.classList.remove("is-open");
-      document.body.classList.remove("modal-open");
-      document.getElementById("post-title").value = "";
-      document.getElementById("post-desc").value = "";
-      document.getElementById("post-deadline").value = "";
-      CB.util.toast("Announcement posted to " + classLabel);
+
+      processingTimer = setTimeout(function () {
+        currentParsed = CB.ai.parseAnnouncement(text, { today: CB.TODAY });
+        fillResultFields(currentParsed);
+        setEditable(false);
+        setStage("result");
+      }, stepDelay * (processingSteps.length + 1));
+    });
+
+    editBtn.addEventListener("click", function () {
+      var editing = !fields.subject.disabled;
+      setEditable(!editing);
+      if (!editing) fields.subject.focus();
+      editBtn.textContent = editing ? "Edit" : "Done editing";
+    });
+
+    postBtn.addEventListener("click", function () {
+      if (!currentParsed) return;
+      var deadline = fields.deadline.value || null;
+      var announcement = {
+        id: "cr-" + Date.now(),
+        raw: currentParsed.raw,
+        title: resultTitleDisplay.textContent,
+        description: currentParsed.summary,
+        subject: fields.subject.value || null,
+        action: fields.action.value || null,
+        deadline: deadline,
+        time: fields.time.value || null,
+        venue: fields.venue.value || "Not specified",
+        category: fields.category.value,
+        date: new Date().toISOString().slice(0, 10),
+        priority: fields.priority.value,
+        source: classLabel + " CR",
+        forClass: classLabel,
+        add_to_calendar: fields.calendar.checked && !!deadline,
+        tags: currentParsed.tags,
+        confidence: currentParsed.confidence,
+        aiGenerated: true
+      };
+      CB.storage.addCrAnnouncement(announcement);
+      closePostModal();
+      CB.util.toast("Posted to " + classLabel + " · sorted.");
       renderAll();
     });
   }

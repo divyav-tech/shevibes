@@ -6,17 +6,20 @@
   "use strict";
 
   if (!CB.initAppHeader()) return;
+  CB.ui.initPolaroid();
 
   var profile = CB.storage.getProfile();
 
   function classLabelOf(p) { return p.year + " · " + p.branch + " · Section " + p.section; }
 
   function paintSummary() {
-    document.getElementById("profile-avatar-lg").textContent = (profile.branch || "S").charAt(0).toUpperCase();
+    document.getElementById("profile-avatar-lg").textContent = CB.util.avatarInitial(profile);
+    document.getElementById("profile-summary-name").textContent = profile.name || "Your name";
     document.getElementById("profile-summary-role").textContent = profile.role;
     document.getElementById("profile-summary-class").textContent = classLabelOf(profile);
   }
 
+  document.getElementById("edit-name").value = profile.name || "";
   document.getElementById("edit-role").value = profile.role;
   document.getElementById("edit-year").value = profile.year;
   document.getElementById("edit-branch").value = profile.branch;
@@ -40,7 +43,13 @@
   paintSummary();
 
   document.getElementById("save-profile").addEventListener("click", function () {
+    var name = document.getElementById("edit-name").value.trim();
+    if (!name) {
+      CB.util.toast("Tell us your name first");
+      return;
+    }
     profile = {
+      name: name,
       role: document.getElementById("edit-role").value,
       year: document.getElementById("edit-year").value,
       branch: document.getElementById("edit-branch").value,
@@ -53,15 +62,20 @@
     }
     CB.storage.saveProfile(profile);
     paintSummary();
+    // The header avatar (initial) updates immediately too, not just on next page load.
+    var headerAvatar = document.getElementById("app-avatar");
+    if (headerAvatar) headerAvatar.textContent = CB.util.avatarInitial(profile);
     CB.util.toast("Profile updated");
   });
 
   document.getElementById("reset-personalization").addEventListener("click", function () {
-    var confirmed = window.confirm("This clears your role, class, interests and saved items on this device. Continue?");
+    var confirmed = window.confirm("This clears your name, role, class, interests, saved items and photos on this device. Continue?");
     if (!confirmed) return;
     CB.storage.clearProfile();
     localStorage.removeItem("campusboard.saved");
     localStorage.removeItem("campusboard.crAnnouncements");
+    localStorage.removeItem("campusboard.calendarNotes");
+    localStorage.removeItem("campusboard.polaroids");
     window.location.href = "index.html";
   });
 
@@ -71,7 +85,7 @@
     var saved = CB.storage.getSaved();
     var announcements = CB.data.getAllAnnouncements();
     var opportunities = CB.data.opportunities;
-    var events = CB.data.events;
+    var events = CB.data.getAllEvents();
 
     var items = [];
     (saved.announcement || []).forEach(function (id) {
@@ -103,7 +117,7 @@
       var source = d.source || d.org;
 
       var card = document.createElement("div");
-      card.className = "info-card is-latest";
+      card.className = "info-card tone-rose";
       card.innerHTML =
         '<div class="info-card-head">' +
           '<div><span class="info-card-tag">' + entry.label + '</span><p class="info-card-title">' + title + '</p></div>' +

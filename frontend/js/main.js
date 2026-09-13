@@ -20,8 +20,15 @@
     profile: "campusboard.profile",
     saved: "campusboard.saved",
     crAnnouncements: "campusboard.crAnnouncements",
-    notifications: "campusboard.notifications"
+    notifications: "campusboard.notifications",
+    calendarNotes: "campusboard.calendarNotes",
+    polaroids: "campusboard.polaroids",
+    customPolaroids: "campusboard.customPolaroids"
   };
+
+  // Anchored "today" for this prototype — keeps deadlines, priorities and
+  // the calendar's default month consistent with the sample data below.
+  var TODAY = new Date(2026, 8, 12); // 12 September 2026
 
   /* ---------------- storage: profile ---------------- */
 
@@ -100,6 +107,66 @@
     list.unshift(announcement);
     localStorage.setItem(STORAGE_KEYS.crAnnouncements, JSON.stringify(list));
     return list;
+  }
+
+  /* ---------------- storage: calendar notes (student's own) ---------------- */
+  // shape: [{ id, date: "YYYY-MM-DD", text, type: "Deadline"|"Exam"|"Event"|"Reminder" }]
+
+  function getCalendarNotes() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEYS.calendarNotes);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function addCalendarNote(note) {
+    var list = getCalendarNotes();
+    note.id = "note-" + Date.now();
+    list.push(note);
+    localStorage.setItem(STORAGE_KEYS.calendarNotes, JSON.stringify(list));
+    return note;
+  }
+
+  function updateCalendarNote(id, changes) {
+    var list = getCalendarNotes().map(function (n) {
+      return n.id === id ? Object.assign({}, n, changes) : n;
+    });
+    localStorage.setItem(STORAGE_KEYS.calendarNotes, JSON.stringify(list));
+    return list;
+  }
+
+  function deleteCalendarNote(id) {
+    var list = getCalendarNotes().filter(function (n) { return n.id !== id; });
+    localStorage.setItem(STORAGE_KEYS.calendarNotes, JSON.stringify(list));
+    return list;
+  }
+
+  /* ---------------- storage: polaroid photos ---------------- */
+  // shape: { "<polaroid-id>": "data:image/...;base64,..." }
+
+  function getPolaroids() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEYS.polaroids);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function setPolaroidImage(polaroidId, dataUrl) {
+    var all = getPolaroids();
+    all[polaroidId] = dataUrl;
+    localStorage.setItem(STORAGE_KEYS.polaroids, JSON.stringify(all));
+    return all;
+  }
+
+  function removePolaroidImage(polaroidId) {
+    var all = getPolaroids();
+    delete all[polaroidId];
+    localStorage.setItem(STORAGE_KEYS.polaroids, JSON.stringify(all));
+    return all;
   }
 
   /* ---------------- storage: notifications ---------------- */
@@ -185,6 +252,69 @@
   function getAllAnnouncements() {
     var crPosted = getCrAnnouncements();
     return crPosted.concat(SAMPLE_ANNOUNCEMENTS);
+  }
+
+  // Category → event "type" used by the calendar's tone/icon system.
+  var CATEGORY_TO_EVENT_TYPE = {
+    Academic: "deadline",
+    Class: "event",
+    Workshop: "workshop",
+    Competition: "competition",
+    Society: "society",
+    Event: "event",
+    Important: "deadline",
+    General: "event"
+  };
+
+  // AI-posted CR announcements that resolved a deadline automatically
+  // flow onto the calendar — this is what "posting updates everything"
+  // means in the AI pipeline (see project brief, item 6 & 23).
+  function deriveEventsFromCrAnnouncements() {
+    return getCrAnnouncements()
+      .filter(function (a) { return a.add_to_calendar && a.deadline; })
+      .map(function (a) {
+        return {
+          id: "cr-evt-" + a.id,
+          title: a.title,
+          date: a.deadline,
+          time: a.time || null,
+          venue: a.venue || null,
+          type: CATEGORY_TO_EVENT_TYPE[a.category] || "event",
+          priority: a.priority,
+          forClass: a.forClass,
+          aiGenerated: true
+        };
+      });
+  }
+
+  function getAllEvents() {
+    return SAMPLE_EVENTS.concat(deriveEventsFromCrAnnouncements());
+  }
+
+  /* ---------------- category → paper tone ---------------- */
+
+  var TONE_MAP = {
+    Academic: "tone-academic",
+    Important: "tone-important",
+    Opportunity: "tone-opportunity",
+    Scholarships: "tone-opportunity",
+    Tech: "tone-opportunity",
+    Competitions: "tone-opportunity",
+    Workshops: "tone-opportunity",
+    Workshop: "tone-opportunity",
+    Competition: "tone-opportunity",
+    Event: "tone-event",
+    Events: "tone-event",
+    Class: "tone-rose",
+    Society: "tone-society",
+    Societies: "tone-society",
+    Volunteering: "tone-opportunity",
+    Personal: "tone-personal",
+    General: "tone-cream"
+  };
+
+  function toneForCategory(category) {
+    return TONE_MAP[category] || "tone-cream";
   }
 
   /* ---------------- small utilities ---------------- */
@@ -346,14 +476,20 @@
     }
   }
 
+  // Avatar always shows the first letter of the user's saved name —
+  // falls back to a neutral "S" (Student) if no name was given.
+  function avatarInitial(profile) {
+    var name = (profile && profile.name || "").trim();
+    return name ? name.charAt(0).toUpperCase() : "S";
+  }
+
   function initAvatar() {
     var avatar = document.getElementById("app-avatar");
     if (!avatar) return;
     var profile = getProfile();
     if (!profile) return;
-    var initial = (profile.branch || "S").charAt(0).toUpperCase();
-    avatar.textContent = initial;
-    avatar.title = profile.role + " · " + profile.year + " · " + profile.branch + " · Section " + profile.section;
+    avatar.textContent = avatarInitial(profile);
+    avatar.title = (profile.name ? profile.name + " · " : "") + profile.role + " · " + profile.year + " · " + profile.branch + " · Section " + profile.section;
   }
 
   function guardAuthenticatedPage() {
@@ -415,6 +551,7 @@
         '<div><dt>' + (item.venueLabel || "Venue") + '</dt><dd class="' + (item.venue === "Not specified" || !item.venue ? "not-specified" : "") + '">' + (item.venue || "Not specified") + '</dd></div>' +
       '</dl>' +
       '<p style="margin-top:14px;font-size:0.85rem;color:var(--color-text-muted);">Source: <strong style="color:var(--color-text);">' + item.source + '</strong></p>' +
+      (item.aiGenerated ? '<p class="ai-trust-line">✦ AI understood this from the CR\u2019s original message — some details may be edited by hand.</p>' : '') +
       (item.original ? '<a href="#" class="trust-original" style="margin-top:14px;display:inline-block;">Original Announcement →</a>' : '') +
       '<div style="margin-top:22px;"><button class="btn btn-ghost" type="button" id="cb-shared-save-btn">' +
         (isCurrentlySaved ? "★ Saved — click to remove" : "☆ Save this") +
@@ -442,7 +579,8 @@
     }
     items.forEach(function (item) {
       var card = document.createElement("div");
-      card.className = "info-card " + (toneClass || "");
+      var tone = toneClass || toneForCategory(item.category);
+      card.className = "info-card " + tone;
       card.innerHTML =
         '<div class="info-card-head">' +
           '<div>' +
@@ -460,7 +598,8 @@
         '</div>' +
         (item.tags && item.tags.length
           ? '<div class="info-card-meta">' + item.tags.map(function (t) { return '<span class="info-card-tag">' + t + '</span>'; }).join("") + '</div>'
-          : '');
+          : '') +
+        (item.aiGenerated ? '<span class="ai-badge">AI sorted this</span>' : '');
       card.addEventListener("click", function (e) {
         if (e.target.closest("[data-save]")) return;
         item.savedType = type;
@@ -479,6 +618,168 @@
         document.dispatchEvent(new CustomEvent("cb:saved-changed"));
       });
     });
+  }
+
+  /* ---------------- shared UI: functional polaroids ---------------- */
+  // Any element like:
+  //   <button class="polaroid polaroid-upload" data-polaroid-id="dashboard-campus">
+  //     <div class="photo-block"></div>
+  //     <span class="polaroid-caption">campus life</span>
+  //   </button>
+  // becomes clickable, lets the user pick/replace/remove a photo, and the
+  // photo (as a data URL) persists across refreshes via localStorage.
+
+  function renderPolaroidState(photoBlock, dataUrl) {
+    if (dataUrl) {
+      photoBlock.innerHTML = '<img src="' + dataUrl + '" alt="">';
+    } else {
+      photoBlock.innerHTML = '<span class="photo-block-empty-label">stick a little<br>picture here ✦</span>';
+    }
+  }
+
+  function ensurePolaroidModal() {
+    var modal = document.getElementById("cb-polaroid-modal");
+    if (modal) return modal;
+    modal = document.createElement("div");
+    modal.className = "cb-modal";
+    modal.id = "cb-polaroid-modal";
+    modal.setAttribute("aria-hidden", "true");
+    modal.innerHTML =
+      '<div class="cb-modal-backdrop" data-close-polaroid-modal></div>' +
+      '<div class="cb-modal-panel polaroid-modal-panel" role="dialog" aria-modal="true">' +
+        '<button class="cb-modal-close" type="button" aria-label="Close" data-close-polaroid-modal>×</button>' +
+        '<div id="cb-polaroid-modal-body"></div>' +
+      '</div>';
+    document.body.appendChild(modal);
+    modal.querySelectorAll("[data-close-polaroid-modal]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        modal.classList.remove("is-open");
+        document.body.classList.remove("modal-open");
+      });
+    });
+    return modal;
+  }
+
+  function openPolaroidModal(polaroidId, photoBlock) {
+    var modal = ensurePolaroidModal();
+    var body = document.getElementById("cb-polaroid-modal-body");
+    var current = getPolaroids()[polaroidId];
+
+    body.innerHTML =
+      '<h2>Add a little memory ✦</h2>' +
+      '<p class="hand-note">a little picture for your corner</p>' +
+      '<div class="polaroid-modal-preview" id="cb-polaroid-preview">' +
+        (current ? '<img src="' + current + '" alt="">' : 'no photo yet') +
+      '</div>' +
+      '<input type="file" accept="image/*" id="cb-polaroid-file" hidden>' +
+      '<div class="polaroid-modal-actions">' +
+        '<button class="btn btn-primary" type="button" id="cb-polaroid-choose">' + (current ? "Change photo" : "Choose an image") + '</button>' +
+        (current ? '<button class="btn btn-ghost" type="button" id="cb-polaroid-remove">Remove photo</button>' : '') +
+      '</div>';
+
+    var fileInput = document.getElementById("cb-polaroid-file");
+    document.getElementById("cb-polaroid-choose").addEventListener("click", function () { fileInput.click(); });
+
+    fileInput.addEventListener("change", function () {
+      var file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        var dataUrl = reader.result;
+        setPolaroidImage(polaroidId, dataUrl);
+        renderPolaroidState(photoBlock, dataUrl);
+        modal.classList.remove("is-open");
+        document.body.classList.remove("modal-open");
+        toast("Saved ✦");
+      };
+      reader.readAsDataURL(file);
+    });
+
+    var removeBtn = document.getElementById("cb-polaroid-remove");
+    if (removeBtn) {
+      removeBtn.addEventListener("click", function () {
+        removePolaroidImage(polaroidId);
+        renderPolaroidState(photoBlock, null);
+        modal.classList.remove("is-open");
+        document.body.classList.remove("modal-open");
+        toast("Removed");
+      });
+    }
+
+    modal.classList.add("is-open");
+    document.body.classList.add("modal-open");
+  }
+
+  function wirePolaroidElement(widget) {
+    var id = widget.dataset.polaroidId;
+    var photoBlock = widget.querySelector(".photo-block");
+    if (!photoBlock) return;
+    renderPolaroidState(photoBlock, getPolaroids()[id]);
+    widget.addEventListener("click", function () { openPolaroidModal(id, photoBlock); });
+  }
+
+  function initPolaroid() {
+    document.querySelectorAll(".polaroid-upload[data-polaroid-id]").forEach(wirePolaroidElement);
+  }
+
+  /* ---------------- storage: extra user-added polaroid slots ---------------- */
+  // Lets a page offer an "add a polaroid" button. Slots are grouped by an
+  // arbitrary group key (e.g. "dashboard") so different pages keep their
+  // own lists. shape: { "<groupKey>": ["dashboard-1699999999999", ...] }
+
+  function getCustomPolaroidSlots(groupKey) {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEYS.customPolaroids);
+      var all = raw ? JSON.parse(raw) : {};
+      return all[groupKey] || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function addCustomPolaroidSlot(groupKey, polaroidId) {
+    var raw = localStorage.getItem(STORAGE_KEYS.customPolaroids);
+    var all = {};
+    try { all = raw ? JSON.parse(raw) : {}; } catch (e) { all = {}; }
+    all[groupKey] = (all[groupKey] || []).concat([polaroidId]);
+    localStorage.setItem(STORAGE_KEYS.customPolaroids, JSON.stringify(all));
+  }
+
+  function buildPolaroidElement(polaroidId, caption, rotDeg) {
+    var widget = document.createElement("button");
+    widget.className = "polaroid polaroid-upload";
+    widget.type = "button";
+    widget.dataset.polaroidId = polaroidId;
+    widget.style.position = "relative";
+    widget.style.setProperty("--rot", rotDeg + "deg");
+    widget.innerHTML = '<div class="photo-block"></div><span class="polaroid-caption">' + caption + '</span>';
+    return widget;
+  }
+
+  // Renders any previously-added custom slots for a group, then wires up
+  // the "add" button (if present) to create new slots on click, persist
+  // them, and open the picker immediately.
+  function initPolaroidAdder(containerEl, groupKey, addBtnEl) {
+    if (!containerEl) return;
+    var captions = ["a little memory", "campus moment", "worth remembering"];
+    getCustomPolaroidSlots(groupKey).forEach(function (id, i) {
+      var widget = buildPolaroidElement(id, captions[i % captions.length], (i % 2 === 0 ? -1 : 1) * (2 + (i % 3)));
+      if (addBtnEl) containerEl.insertBefore(widget, addBtnEl);
+      else containerEl.appendChild(widget);
+      wirePolaroidElement(widget);
+    });
+
+    if (addBtnEl) {
+      addBtnEl.addEventListener("click", function () {
+        var id = groupKey + "-" + Date.now();
+        addCustomPolaroidSlot(groupKey, id);
+        var rot = (Math.random() * 6 - 3).toFixed(1);
+        var widget = buildPolaroidElement(id, "a little memory", rot);
+        containerEl.insertBefore(widget, addBtnEl);
+        wirePolaroidElement(widget);
+        widget.click(); // open the picker right away
+      });
+    }
   }
 
   /* ---------------- mobile nav toggle (shared markup/pattern) ---------------- */
@@ -504,6 +805,7 @@
   /* ---------------- expose ---------------- */
 
   global.CB = {
+    TODAY: TODAY,
     storage: {
       getProfile: getProfile,
       saveProfile: saveProfile,
@@ -518,26 +820,38 @@
       getNotifications: getNotifications,
       markNotificationRead: markNotificationRead,
       markAllNotificationsRead: markAllNotificationsRead,
-      unreadNotificationCount: unreadNotificationCount
+      unreadNotificationCount: unreadNotificationCount,
+      getCalendarNotes: getCalendarNotes,
+      addCalendarNote: addCalendarNote,
+      updateCalendarNote: updateCalendarNote,
+      deleteCalendarNote: deleteCalendarNote,
+      getPolaroids: getPolaroids,
+      setPolaroidImage: setPolaroidImage,
+      removePolaroidImage: removePolaroidImage
     },
     data: {
       announcements: SAMPLE_ANNOUNCEMENTS,
       opportunities: SAMPLE_OPPORTUNITIES,
       events: SAMPLE_EVENTS,
-      getAllAnnouncements: getAllAnnouncements
+      getAllAnnouncements: getAllAnnouncements,
+      getAllEvents: getAllEvents
     },
     util: {
       formatDate: formatDate,
       matchesInterests: matchesInterests,
       debounce: debounce,
-      toast: toast
+      toast: toast,
+      toneForCategory: toneForCategory,
+      avatarInitial: avatarInitial
     },
     initMobileNav: initMobileNav,
     initAppHeader: initAppHeader,
     guardAuthenticatedPage: guardAuthenticatedPage,
     ui: {
       renderInfoCards: renderInfoCards,
-      openDetailModal: openDetailModal
+      openDetailModal: openDetailModal,
+      initPolaroid: initPolaroid,
+      initPolaroidAdder: initPolaroidAdder
     }
   };
 

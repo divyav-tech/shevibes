@@ -16,10 +16,10 @@
   <div class="app-header-inner">
     <a class="wordmark" href="dashboard.html">
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <circle cx="10" cy="6" r="3" fill="#C45F62"/>
+        <circle cx="10" cy="6" r="3" fill="#B97D7B"/>
         <circle cx="6" cy="11" r="3" fill="#B97D7B"/>
         <circle cx="14" cy="11" r="3" fill="#DDD3C9"/>
-        <circle cx="10" cy="14" r="2.4" fill="#6F674F"/>
+        <circle cx="10" cy="14" r="2.4" fill="#7E745B"/>
       </svg>
       Campus Board
     </a>
@@ -69,7 +69,10 @@
 
   <section class="dash-section">
     <div class="dash-section-head">
-      <h2>Needs Attention</h2>
+      <div>
+        <span class="hand-note" style="display:block;">don't let this sneak up on you</span>
+        <h2>Needs Attention</h2>
+      </div>
       <a class="dash-section-link" href="announcements.html">View all announcements →</a>
     </div>
     <div class="dash-grid" id="needs-attention-grid"></div>
@@ -77,7 +80,10 @@
 
   <section class="dash-section">
     <div class="dash-section-head">
-      <h2>For You</h2>
+      <div>
+        <span class="hand-note" style="display:block;">just between classes ✦</span>
+        <h2>For You</h2>
+      </div>
       <a class="dash-section-link" href="opportunities.html">View all opportunities →</a>
     </div>
     <div class="dash-grid" id="for-you-grid"></div>
@@ -133,42 +139,132 @@
     <div class="pinned-notes" id="pinned-notes"></div>
   </section>
 
+  <section class="dash-section">
+    <div class="dash-section-head">
+      <h2>My Campus Corner</h2>
+    </div>
+    <p class="hand-note" style="margin-bottom:14px;">tiny campus things ✦</p>
+    <div style="display:flex;gap:22px;flex-wrap:wrap;" id="campus-corner-polaroids">
+      <button class="polaroid polaroid-upload" type="button" data-polaroid-id="dashboard-campus" style="--rot:-3deg;position:relative;">
+        <div class="photo-block"></div>
+        <span class="polaroid-caption">campus life</span>
+      </button>
+      <button class="polaroid polaroid-upload" type="button" data-polaroid-id="dashboard-friends" style="--rot:2deg;position:relative;">
+        <div class="photo-block"></div>
+        <span class="polaroid-caption">people, mostly</span>
+      </button>
+      <button class="polaroid-add" type="button" id="campus-corner-add" aria-label="Add another polaroid">
+        <span class="polaroid-add-icon">+</span>
+        <span>add a polaroid</span>
+      </button>
+    </div>
+  </section>
+
 </main>
 
-<!-- CR: Post Announcement modal -->
+<!-- CR: AI announcement flow (compose -> processing -> review) -->
 <div class="cb-modal" id="post-modal" aria-hidden="true">
   <div class="cb-modal-backdrop" data-close-modal></div>
   <div class="cb-modal-panel" role="dialog" aria-modal="true" aria-labelledby="post-modal-title">
     <button class="cb-modal-close" type="button" aria-label="Close" data-close-modal>×</button>
-    <h2 id="post-modal-title">Post Announcement</h2>
-    <label for="post-title">Announcement title</label>
-    <input id="post-title" type="text" placeholder="e.g. Practical file submission">
-    <label for="post-desc">Description</label>
-    <textarea id="post-desc" placeholder="What do students need to do?"></textarea>
-    <label for="post-category">Category</label>
-    <select id="post-category">
-      <option>Academic</option>
-      <option>Class</option>
-      <option>Society</option>
-      <option>General</option>
-      <option>Important</option>
-    </select>
-    <label for="post-deadline">Date / deadline</label>
-    <input id="post-deadline" type="date">
-    <label for="post-priority">Priority</label>
-    <select id="post-priority">
-      <option value="high">High</option>
-      <option value="medium" selected>Medium</option>
-      <option value="low">Low</option>
-    </select>
-    <div class="cb-modal-footer">
-      <button class="btn btn-ghost" type="button" data-close-modal>Cancel</button>
-      <button class="btn btn-primary" type="button" id="post-submit">Post Announcement</button>
+
+    <!-- Stage 1 — compose -->
+    <div class="ai-flow-stage is-active" data-flow-stage="compose">
+      <span class="ai-flow-kicker">tell your class ✦</span>
+      <h2 class="ai-compose-title" id="post-modal-title">What's happening?</h2>
+      <p class="ai-compose-sub">just tell us what happened — we'll sort the rest.</p>
+      <div class="ai-compose-paper">
+        <textarea class="ai-compose-textarea" id="ai-raw-input" placeholder="Tomorrow's BEE practical file submission is at 2 PM. Bring Experiment 5 and 6."></textarea>
+      </div>
+      <button class="btn btn-primary ai-understand-btn" type="button" id="ai-understand-btn">✦ Understand this</button>
+    </div>
+
+    <!-- Stage 2 — AI processing -->
+    <div class="ai-flow-stage" data-flow-stage="processing">
+      <p class="ai-processing-title">AI is sorting it out ✦</p>
+      <div class="ai-processing">
+        <div class="ai-processing-orb"></div>
+        <ul class="ai-processing-steps" id="ai-processing-steps">
+          <li data-step="0">reading your note…</li>
+          <li data-step="1">finding the important bits…</li>
+          <li data-step="2">checking the deadline…</li>
+          <li data-step="3">making your class board…</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Stage 3 — AI result / review -->
+    <div class="ai-flow-stage" data-flow-stage="result">
+      <span class="ai-flow-kicker">AI found ✦</span>
+      <p class="ai-result-title">Review before it goes out</p>
+
+      <div class="ai-result-card">
+        <p class="ai-result-heading" id="ai-result-title-display">—</p>
+
+        <div class="ai-result-field">
+          <label for="ai-field-subject">Subject</label>
+          <input id="ai-field-subject" type="text" disabled>
+        </div>
+        <div class="ai-result-field">
+          <label for="ai-field-action">Action</label>
+          <input id="ai-field-action" type="text" disabled>
+        </div>
+        <div class="ai-result-field">
+          <label for="ai-field-deadline">Deadline</label>
+          <input id="ai-field-deadline" type="date" disabled>
+        </div>
+        <div class="ai-result-field">
+          <label for="ai-field-time">Time</label>
+          <input id="ai-field-time" type="text" disabled placeholder="Not specified">
+        </div>
+        <div class="ai-result-field">
+          <label for="ai-field-venue">Venue</label>
+          <input id="ai-field-venue" type="text" disabled placeholder="Not specified">
+        </div>
+        <div class="ai-result-field">
+          <label for="ai-field-category">Category</label>
+          <select id="ai-field-category" disabled>
+            <option>Academic</option>
+            <option>Class</option>
+            <option>Workshop</option>
+            <option>Competition</option>
+            <option>Society</option>
+            <option>Event</option>
+            <option>Important</option>
+            <option>General</option>
+          </select>
+        </div>
+        <div class="ai-result-field">
+          <label for="ai-field-priority">Priority</label>
+          <select id="ai-field-priority" disabled>
+            <option value="high">🔴 HIGH</option>
+            <option value="medium">🟡 MEDIUM</option>
+            <option value="low">🟢 LOW</option>
+          </select>
+        </div>
+        <div class="ai-result-field">
+          <label>Class</label>
+          <input id="ai-field-class" type="text" disabled>
+        </div>
+        <div class="ai-result-field ai-result-checkbox">
+          <input id="ai-field-calendar" type="checkbox" disabled>
+          <label for="ai-field-calendar" style="margin:0;text-transform:none;font-weight:600;font-size:0.88rem;">Add to class calendar</label>
+        </div>
+
+        <p class="ai-trust-line">✦ AI understood this from what you typed — nothing here was invented. Edit anything that's wrong.</p>
+      </div>
+
+      <div class="ai-flow-actions">
+        <button class="btn btn-ghost" type="button" id="ai-edit-btn">Edit</button>
+        <button class="btn btn-primary" type="button" id="ai-post-btn">Post to Class</button>
+      </div>
     </div>
   </div>
 </div>
 
+
 <script src="js/main.js"></script>
+<script src="js/ai-parser.js"></script>
 <script src="js/dashboard.js"></script>
 </body>
 </html>

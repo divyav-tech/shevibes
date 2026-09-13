@@ -6,6 +6,7 @@
   "use strict";
 
   if (!CB.initAppHeader()) return;
+  CB.ui.initPolaroid();
 
   var profile = CB.storage.getProfile();
   var allOpportunities = CB.data.opportunities;
@@ -57,7 +58,7 @@
     items.forEach(function (o) {
       var card = toCard(o);
       var el = document.createElement("div");
-      el.className = "info-card is-foryou";
+      el.className = "info-card " + CB.util.toneForCategory(o.category);
       el.innerHTML =
         '<div class="info-card-head">' +
           '<div><span class="info-card-tag">' + o.category + '</span><p class="info-card-title">' + o.title + '</p></div>' +
