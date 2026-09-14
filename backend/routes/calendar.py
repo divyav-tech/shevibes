@@ -10,6 +10,13 @@ def get_events():
     try:
         rows = db.fetch_all("SELECT * FROM calendar_events ORDER BY event_date ASC")
         if rows:
+            for r in rows:
+                if r.get('event_date') is not None:
+                    r['event_date'] = str(r['event_date'])
+                if r.get('event_time') is not None:
+                    r['event_time'] = str(r['event_time'])
+                if r.get('created_at') is not None:
+                    r['created_at'] = str(r['created_at'])
             return jsonify({'events': rows, 'source': 'database', 'success': True})
     except Exception as e:
         logger.error(f"DB Error in get_events: {e}")
