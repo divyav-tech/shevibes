@@ -72,9 +72,23 @@
       .slice(0, 4);
     CB.ui.renderInfoCards("needs-attention-grid", needsAttention, "announcement", "tone-important");
 
-    var forYou = opportunities.filter(function (o) { return CB.util.matchesInterests(o.category, profile.interests); }).slice(0, 4);
-    if (!forYou.length) forYou = opportunities.slice(0, 4);
-    CB.ui.renderInfoCards("for-you-grid", forYou.map(toOpportunityCard), "opportunity", "tone-opportunity");
+    var forYouRaw = opportunities.filter(function (o) { return CB.util.matchesInterests(o.category, profile.interests); }).slice(0, 4);
+    if (!forYouRaw.length) forYouRaw = opportunities.slice(0, 4);
+    var forYouCards = forYouRaw.map(toOpportunityCard);
+
+    // Feature 2: Connect AI Prioritization to "For You" section
+    CB.api.prioritize(profile, forYouCards).then(function(priorities) {
+      if (priorities && priorities.length === forYouCards.length) {
+        forYouCards.forEach(function(card, idx) {
+          if (priorities[idx] && priorities[idx].reason) {
+            card.description = priorities[idx].reason + " · " + card.description;
+          }
+        });
+      }
+      CB.ui.renderInfoCards("for-you-grid", forYouCards, "opportunity", "tone-opportunity");
+    }).catch(function() {
+      CB.ui.renderInfoCards("for-you-grid", forYouCards, "opportunity", "tone-opportunity");
+    });
 
     var upcomingItems = events
       .filter(relevantToClass)
@@ -260,6 +274,7 @@
         aiGenerated: true
       };
       CB.storage.addCrAnnouncement(announcement);
+      CB.api.postNotice(announcement); // Requirement 7 & 8: Persist to backend DB & auto-add calendar_event
       closePostModal();
       CB.util.toast("Posted to " + classLabel + " · sorted.");
       renderAll();
@@ -361,6 +376,7 @@
                   aiGenerated: true
                 };
                 CB.storage.addCrAnnouncement(ann);
+                CB.api.postNotice(ann); // Persist through backend API
                 CB.util.toast("Approved & posted to Class Board!");
                 card.style.opacity = "0.5";
                 card.querySelector(".approve-digest-item").disabled = true;

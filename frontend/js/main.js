@@ -807,6 +807,53 @@
   var API_BASE = "";
 
   var api = {
+    getNotices: function() {
+      return fetch(API_BASE + "/api/notices")
+        .then(function(r) { return r.json(); })
+        .catch(function() { return null; });
+    },
+    postNotice: function(notice) {
+      return fetch(API_BASE + "/api/notices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(notice)
+      })
+      .then(function(r) { return r.json(); })
+      .catch(function() { return null; });
+    },
+    getOpportunities: function() {
+      return fetch(API_BASE + "/api/opportunities")
+        .then(function(r) { return r.json(); })
+        .catch(function() { return null; });
+    },
+    getCalendarEvents: function() {
+      return fetch(API_BASE + "/api/calendar/events")
+        .then(function(r) { return r.json(); })
+        .catch(function() { return null; });
+    },
+    postCalendarEvent: function(evt) {
+      return fetch(API_BASE + "/api/calendar/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(evt)
+      })
+      .then(function(r) { return r.json(); })
+      .catch(function() { return null; });
+    },
+    getProfile: function() {
+      return fetch(API_BASE + "/api/users/profile")
+        .then(function(r) { return r.json(); })
+        .catch(function() { return null; });
+    },
+    postProfile: function(profile) {
+      return fetch(API_BASE + "/api/users/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(profile)
+      })
+      .then(function(r) { return r.json(); })
+      .catch(function() { return null; });
+    },
     parseAnnouncement: function (text) {
       return fetch(API_BASE + "/api/ai/parse-announcement", {
         method: "POST",
@@ -914,7 +961,8 @@
     });
 
     if (closeBtn) {
-      closeBtn.addEventListener("click", function () {
+      closeBtn.addEventListener("click", function (e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
         panel.hidden = true;
       });
     }
