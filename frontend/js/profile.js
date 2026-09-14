@@ -9,8 +9,27 @@
   CB.ui.initPolaroid();
 
   var profile = CB.storage.getProfile();
+  var selectedInterests = new Set(profile.interests || []);
 
   function classLabelOf(p) { return p.year + " · " + p.branch + " · Section " + p.section; }
+
+  function mapBackendRole(role) {
+    var r = String(role || "").toLowerCase();
+    if (r === "cr" || r.indexOf("representative") !== -1) return "Class Representative";
+    return "Regular Student";
+  }
+
+  function mapBackendProfile(row) {
+    return {
+      name: row.name,
+      role: mapBackendRole(row.role),
+      year: row.year,
+      branch: row.branch,
+      section: row.section,
+      college: row.college,
+      interests: Array.isArray(row.interests) ? row.interests : []
+    };
+  }
 
   function paintSummary() {
     document.getElementById("profile-avatar-lg").textContent = CB.util.avatarInitial(profile);
@@ -19,15 +38,26 @@
     document.getElementById("profile-summary-class").textContent = classLabelOf(profile);
   }
 
-  document.getElementById("edit-name").value = profile.name || "";
-  document.getElementById("edit-role").value = profile.role;
-  document.getElementById("edit-year").value = profile.year;
-  document.getElementById("edit-branch").value = profile.branch;
-  document.getElementById("edit-section").value = profile.section;
+  function refreshHeaderAvatar() {
+    var headerAvatar = document.getElementById("app-avatar");
+    if (headerAvatar) headerAvatar.textContent = CB.util.avatarInitial(profile);
+  }
 
-  var selectedInterests = new Set(profile.interests || []);
+  function fillFormFromProfile() {
+    document.getElementById("edit-name").value = profile.name || "";
+    document.getElementById("edit-role").value = profile.role;
+    document.getElementById("edit-year").value = profile.year;
+    document.getElementById("edit-branch").value = profile.branch;
+    document.getElementById("edit-section").value = profile.section;
+    selectedInterests.clear();
+    (profile.interests || []).forEach(function (interest) { selectedInterests.add(interest); });
+    document.querySelectorAll("#edit-interests [data-value]").forEach(function (chip) {
+      chip.classList.toggle("is-active", selectedInterests.has(chip.dataset.value));
+    });
+  }
+
+  fillFormFromProfile();
   document.querySelectorAll("#edit-interests [data-value]").forEach(function (chip) {
-    if (selectedInterests.has(chip.dataset.value)) chip.classList.add("is-active");
     chip.addEventListener("click", function () {
       var value = chip.dataset.value;
       if (selectedInterests.has(value)) {
@@ -42,6 +72,18 @@
 
   paintSummary();
 
+  if (CB.api && CB.api.getProfile) {
+    CB.api.getProfile().then(function (res) {
+      if (res && res.profile && (res.profile.name || res.profile.id)) {
+        profile = mapBackendProfile(res.profile);
+        CB.storage.saveProfile(profile);
+        fillFormFromProfile();
+        paintSummary();
+        refreshHeaderAvatar();
+      }
+    });
+  }
+
   document.getElementById("save-profile").addEventListener("click", function () {
     var name = document.getElementById("edit-name").value.trim();
     if (!name) {
@@ -54,6 +96,7 @@
       year: document.getElementById("edit-year").value,
       branch: document.getElementById("edit-branch").value,
       section: document.getElementById("edit-section").value,
+      college: profile.college,
       interests: Array.from(selectedInterests)
     };
     if (!profile.interests.length) {
@@ -62,9 +105,10 @@
     }
     CB.storage.saveProfile(profile);
     paintSummary();
-    // The header avatar (initial) updates immediately too, not just on next page load.
-    var headerAvatar = document.getElementById("app-avatar");
-    if (headerAvatar) headerAvatar.textContent = CB.util.avatarInitial(profile);
+    refreshHeaderAvatar();
+    if (CB.api && CB.api.postProfile) {
+      CB.api.postProfile(profile);
+    }
     CB.util.toast("Profile updated");
   });
 
