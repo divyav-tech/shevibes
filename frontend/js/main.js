@@ -28,7 +28,7 @@
 
   // Anchored "today" for this prototype — keeps deadlines, priorities and
   // the calendar's default month consistent with the sample data below.
-  var TODAY = new Date(2026, 8, 12); // 12 September 2026
+  var TODAY = new Date();
 
   /* ---------------- storage: profile ---------------- */
 
@@ -858,7 +858,7 @@
       return fetch(API_BASE + "/api/ai/parse-announcement", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: text, current_date: "2026-09-12" })
+        body: JSON.stringify({ text: text, current_date: TODAY.toISOString().slice(0, 10) })
       })
       .then(function (res) { return res.json(); })
       .then(function (data) {
