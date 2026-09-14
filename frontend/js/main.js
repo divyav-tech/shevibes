@@ -802,10 +802,171 @@
     });
   }
 
+  /* ---------------- Backend API Layer ---------------- */
+
+  var API_BASE = "";
+
+  var api = {
+    parseAnnouncement: function (text) {
+      return fetch(API_BASE + "/api/ai/parse-announcement", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: text, current_date: "2026-09-12" })
+      })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data && data.success && data.parsed) return data.parsed;
+        throw new Error("API parsing returned invalid payload");
+      })
+      .catch(function (err) {
+        console.warn("Backend AI parse unavailable, using local fallback:", err);
+        if (global.CB && global.CB.ai && global.CB.ai.parseAnnouncement) {
+          return global.CB.ai.parseAnnouncement(text, { today: TODAY });
+        }
+        return null;
+      });
+    },
+
+    prioritize: function (profile, items) {
+      return fetch(API_BASE + "/api/ai/prioritize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profile: profile, items: items })
+      })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data && data.success && data.priorities) return data.priorities;
+        throw new Error("API prioritize error");
+      })
+      .catch(function (err) {
+        console.warn("Backend AI prioritize unavailable, using fallback:", err);
+        return null;
+      });
+    },
+
+    chatDigest: function (chatText) {
+      return fetch(API_BASE + "/api/ai/chat-digest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_text: chatText })
+      })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data && data.success && data.digest) return data.digest;
+        throw new Error("API chat digest error");
+      })
+      .catch(function (err) {
+        console.warn("Backend AI chat digest unavailable:", err);
+        return null;
+      });
+    },
+
+    dailyBriefing: function (profile, announcements, opportunities, events) {
+      return fetch(API_BASE + "/api/ai/briefing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profile: profile, announcements: announcements, opportunities: opportunities, events: events })
+      })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data && data.success && data.briefing) return data.briefing;
+        throw new Error("API daily briefing error");
+      })
+      .catch(function (err) {
+        console.warn("Backend AI briefing unavailable:", err);
+        return null;
+      });
+    },
+
+    ask: function (question, profile, context) {
+      return fetch(API_BASE + "/api/ai/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: question, profile: profile, context: context })
+      })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data && data.success && data.result) return data.result;
+        throw new Error("API ask error");
+      })
+      .catch(function (err) {
+        console.warn("Backend AI ask error:", err);
+        return null;
+      });
+    }
+  };
+
+  /* ---------------- Ask Campus Board Widget ---------------- */
+
+  function initAskCampusBoard() {
+    var fab = document.getElementById("ask-cb-fab");
+    var panel = document.getElementById("ask-cb-panel");
+    var closeBtn = document.getElementById("ask-cb-close");
+    var sendBtn = document.getElementById("ask-cb-send");
+    var input = document.getElementById("ask-cb-input");
+    var msgContainer = document.getElementById("ask-cb-messages");
+
+    if (!fab || !panel) return;
+
+    fab.addEventListener("click", function () {
+      panel.hidden = !panel.hidden;
+      if (!panel.hidden && input) input.focus();
+    });
+
+    if (closeBtn) {
+      closeBtn.addEventListener("click", function () {
+        panel.hidden = true;
+      });
+    }
+
+    function appendMessage(text, isUser) {
+      var msgDiv = document.createElement("div");
+      msgDiv.className = "ask-msg " + (isUser ? "user-msg" : "bot-msg");
+      msgDiv.innerText = text;
+      msgContainer.appendChild(msgDiv);
+      msgContainer.scrollTop = msgContainer.scrollHeight;
+    }
+
+    function handleSend() {
+      var q = input.value.trim();
+      if (!q) return;
+
+      appendMessage(q, true);
+      input.value = "";
+
+      var profile = getProfile();
+      var context = {
+        announcements: getAllAnnouncements(),
+        opportunities: SAMPLE_OPPORTUNITIES,
+        events: getAllEvents()
+      };
+
+      appendMessage("Thinking…", false);
+      var thinkingMsg = msgContainer.lastChild;
+
+      api.ask(q, profile, context).then(function (res) {
+        if (thinkingMsg && thinkingMsg.parentNode) msgContainer.removeChild(thinkingMsg);
+        if (res && res.answer) {
+          appendMessage(res.answer, false);
+        } else {
+          appendMessage("Sorry, I couldn't reach the AI backend right now.", false);
+        }
+      });
+    }
+
+    if (sendBtn) sendBtn.addEventListener("click", handleSend);
+    if (input) {
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") handleSend();
+      });
+    }
+  }
+
   /* ---------------- expose ---------------- */
 
   global.CB = {
     TODAY: TODAY,
+    api: api,
     storage: {
       getProfile: getProfile,
       saveProfile: saveProfile,
@@ -846,6 +1007,7 @@
     },
     initMobileNav: initMobileNav,
     initAppHeader: initAppHeader,
+    initAskCampusBoard: initAskCampusBoard,
     guardAuthenticatedPage: guardAuthenticatedPage,
     ui: {
       renderInfoCards: renderInfoCards,
@@ -855,5 +1017,8 @@
     }
   };
 
-  document.addEventListener("DOMContentLoaded", initMobileNav);
+  document.addEventListener("DOMContentLoaded", function() {
+    initMobileNav();
+    initAskCampusBoard();
+  });
 })(window);

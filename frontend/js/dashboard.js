@@ -31,6 +31,36 @@
     return { id: o.id, title: o.title, description: o.description, category: o.category, deadline: o.deadline, source: o.org, venue: o.eligibility };
   }
 
+  function renderDailyBriefing() {
+    var events = CB.data.getAllEvents();
+    CB.api.dailyBriefing(profile, announcements, opportunities, events).then(function (res) {
+      if (!res) return;
+      var headline = document.getElementById("briefing-headline");
+      var mustKnowList = document.getElementById("briefing-must-know-list");
+      var mightLikeList = document.getElementById("briefing-might-like-list");
+
+      if (headline) headline.textContent = res.headline;
+
+      if (mustKnowList && res.must_know) {
+        mustKnowList.innerHTML = "";
+        res.must_know.forEach(function (item) {
+          var li = document.createElement("li");
+          li.innerHTML = (item.level === "red" ? "🔴 " : "🟡 ") + "<strong>" + item.title + "</strong><br><span style='font-size:0.78rem;color:var(--color-text-muted);'>" + item.meta + "</span>";
+          mustKnowList.appendChild(li);
+        });
+      }
+
+      if (mightLikeList && res.might_like) {
+        mightLikeList.innerHTML = "";
+        res.might_like.forEach(function (item) {
+          var li = document.createElement("li");
+          li.innerHTML = "♡ <strong>" + item.title + "</strong><br><span style='font-size:0.78rem;color:var(--color-text-muted);'>" + item.reason + "</span>";
+          mightLikeList.appendChild(li);
+        });
+      }
+    });
+  }
+
   function renderAll() {
     announcements = CB.data.getAllAnnouncements();
     var events = CB.data.getAllEvents();
@@ -75,6 +105,8 @@
       note.innerHTML = '<span class="pin"></span><p class="pinned-note-title">' + item.title + '</p><p class="pinned-note-meta">' + CB.util.formatDate(item.deadline) + " · " + item.source + '</p>';
       pinnedContainer.appendChild(note);
     });
+
+    renderDailyBriefing();
   }
 
   document.addEventListener("cb:saved-changed", function () {
@@ -158,8 +190,8 @@
       fields.deadline.value = parsed.deadline || "";
       fields.time.value = parsed.time || "";
       fields.venue.value = parsed.venue || "";
-      fields.category.value = parsed.category;
-      fields.priority.value = parsed.priority;
+      fields.category.value = parsed.category ? (parsed.category.charAt(0).toUpperCase() + parsed.category.slice(1)) : "General";
+      fields.priority.value = (parsed.priority || "medium").toLowerCase();
       fields.klass.value = classLabel;
       fields.calendar.checked = parsed.add_to_calendar;
     }
@@ -186,12 +218,15 @@
         setTimeout(function () { li.classList.add("is-done"); }, stepDelay * (i + 1));
       });
 
-      processingTimer = setTimeout(function () {
-        currentParsed = CB.ai.parseAnnouncement(text, { today: CB.TODAY });
-        fillResultFields(currentParsed);
-        setEditable(false);
-        setStage("result");
-      }, stepDelay * (processingSteps.length + 1));
+      // Call backend API (or fallback)
+      CB.api.parseAnnouncement(text).then(function (parsed) {
+        currentParsed = parsed || CB.ai.parseAnnouncement(text, { today: CB.TODAY });
+        setTimeout(function () {
+          fillResultFields(currentParsed);
+          setEditable(false);
+          setStage("result");
+        }, stepDelay * 2);
+      });
     });
 
     editBtn.addEventListener("click", function () {
@@ -206,7 +241,7 @@
       var deadline = fields.deadline.value || null;
       var announcement = {
         id: "cr-" + Date.now(),
-        raw: currentParsed.raw,
+        raw: currentParsed.raw || rawInput.value,
         title: resultTitleDisplay.textContent,
         description: currentParsed.summary,
         subject: fields.subject.value || null,
@@ -220,8 +255,8 @@
         source: classLabel + " CR",
         forClass: classLabel,
         add_to_calendar: fields.calendar.checked && !!deadline,
-        tags: currentParsed.tags,
-        confidence: currentParsed.confidence,
+        tags: currentParsed.tags || [],
+        confidence: currentParsed.confidence || 0.9,
         aiGenerated: true
       };
       CB.storage.addCrAnnouncement(announcement);
@@ -229,5 +264,114 @@
       CB.util.toast("Posted to " + classLabel + " · sorted.");
       renderAll();
     });
+
+    /* ---------------- Feature 3: CR AI Chat Digest Modal & Handler ---------------- */
+
+    var chatDigestModal = document.getElementById("chat-digest-modal");
+    var chatDigestBtn = document.getElementById("cr-chat-digest-btn");
+    var chatDigestInput = document.getElementById("chat-digest-input");
+    var chatFileInput = document.getElementById("chat-file-input");
+    var chatFileName = document.getElementById("chat-file-name");
+    var generateDigestBtn = document.getElementById("generate-digest-btn");
+    var digestResultContainer = document.getElementById("digest-result-container");
+    var digestConflictsBox = document.getElementById("digest-conflicts");
+    var digestSummaryText = document.getElementById("digest-summary-text");
+    var digestItemsList = document.getElementById("digest-items-list");
+
+    if (chatDigestBtn && chatDigestModal) {
+      chatDigestBtn.addEventListener("click", function () {
+        chatDigestModal.classList.add("is-open");
+        document.body.classList.add("modal-open");
+      });
+
+      document.querySelectorAll("[data-close-digest-modal]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          chatDigestModal.classList.remove("is-open");
+          document.body.classList.remove("modal-open");
+        });
+      });
+
+      if (chatFileInput) {
+        chatFileInput.addEventListener("change", function (e) {
+          var file = e.target.files[0];
+          if (file) {
+            chatFileName.textContent = file.name;
+            var reader = new FileReader();
+            reader.onload = function (evt) {
+              chatDigestInput.value = evt.target.result;
+            };
+            reader.readAsText(file);
+          }
+        });
+      }
+
+      if (generateDigestBtn) {
+        generateDigestBtn.addEventListener("click", function () {
+          var chatText = chatDigestInput.value.trim();
+          if (!chatText) {
+            CB.util.toast("Please paste or upload chat text first");
+            return;
+          }
+
+          generateDigestBtn.disabled = true;
+          generateDigestBtn.textContent = "✦ Analyzing chat with AI…";
+
+          CB.api.chatDigest(chatText).then(function (digest) {
+            generateDigestBtn.disabled = false;
+            generateDigestBtn.textContent = "✦ Generate AI Digest";
+
+            if (!digest) {
+              CB.util.toast("Could not process chat digest");
+              return;
+            }
+
+            digestResultContainer.hidden = false;
+            digestSummaryText.textContent = digest.summary;
+
+            if (digest.conflicts && digest.conflicts.length > 0) {
+              digestConflictsBox.hidden = false;
+              digestConflictsBox.innerHTML = digest.conflicts.join("<br>");
+            } else {
+              digestConflictsBox.hidden = true;
+            }
+
+            digestItemsList.innerHTML = "";
+            (digest.items || []).forEach(function (item) {
+              var card = document.createElement("div");
+              card.className = "digest-item-card";
+              card.innerHTML = '<div>' +
+                '<span class="board-tag" style="margin-bottom:4px;display:inline-block;">' + item.category + '</span>' +
+                '<div class="digest-item-title">' + (item.title || item.content) + '</div>' +
+                '<div class="digest-item-meta">' + (item.deadline ? 'Deadline: ' + item.deadline + ' · ' : '') + 'Status: ' + (item.status || 'UNVERIFIED') + '</div>' +
+                '</div>' +
+                '<button class="btn btn-primary btn-small approve-digest-item" type="button">Approve</button>';
+
+              card.querySelector(".approve-digest-item").addEventListener("click", function () {
+                var ann = {
+                  id: "cr-digest-" + Date.now(),
+                  title: item.title || item.content.slice(0, 40),
+                  description: item.content,
+                  category: item.category ? item.category.toLowerCase() : "academic",
+                  deadline: item.deadline || null,
+                  date: new Date().toISOString().slice(0, 10),
+                  priority: "high",
+                  source: classLabel + " CR Digest",
+                  forClass: classLabel,
+                  add_to_calendar: !!item.deadline,
+                  aiGenerated: true
+                };
+                CB.storage.addCrAnnouncement(ann);
+                CB.util.toast("Approved & posted to Class Board!");
+                card.style.opacity = "0.5";
+                card.querySelector(".approve-digest-item").disabled = true;
+                renderAll();
+              });
+
+              digestItemsList.appendChild(card);
+            });
+          });
+        });
+      }
+    }
   }
 })();
