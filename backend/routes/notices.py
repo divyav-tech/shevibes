@@ -52,15 +52,34 @@ def create_notice():
     params = (title, summary, content, subject, action, time, venue, category, priority, class_name, deadline, tags_json, confidence, source, ai_generated)
     
     cursor = db.execute_query(query, params)
-    announcement_id = cursor.lastrowid if cursor else None
+    if not cursor:
+        logger.error("DB failure: announcement INSERT returned no cursor")
+        return jsonify({'error': 'Failed to save announcement. Database error.'}), 503
+    announcement_id = cursor.lastrowid
+    cal_event_created = False
 
     # Requirement 8: If add_to_calendar=true and deadline is present, auto-create calendar_event record
     if data.get('add_to_calendar') and deadline:
+        cal_category_map = {
+            'academic': 'academic',
+            'deadline': 'deadline',
+            'important': 'deadline',
+            'opportunity': 'opportunity',
+            'workshop': 'opportunity',
+            'competition': 'opportunity',
+            'event': 'event',
+            'class': 'event',
+            'society': 'event',
+            'general': 'event',
+        }
+        cal_category = cal_category_map.get(category, 'event')
         evt_query = """
         INSERT INTO calendar_events (title, description, event_date, location, category, announcement_id)
         VALUES (%s, %s, %s, %s, %s, %s)
         """
-        evt_params = (title, summary, deadline, venue or 'Campus', category, announcement_id)
-        db.execute_query(evt_query, evt_params)
+        evt_params = (title, summary, deadline, venue or 'Campus', cal_category, announcement_id)
+        evt_cursor = db.execute_query(evt_query, evt_params)
+        if evt_cursor is not None:
+            cal_event_created = True
 
-    return jsonify({'message': 'Notice created successfully', 'id': announcement_id, 'notice': data}), 201
+    return jsonify({'message': 'Notice created successfully', 'id': announcement_id, 'calendar_event_created': cal_event_created if data.get('add_to_calendar') else None, 'notice': data}), 201
