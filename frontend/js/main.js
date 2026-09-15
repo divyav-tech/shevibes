@@ -43,10 +43,12 @@
 
   function saveProfile(profile) {
     localStorage.setItem(STORAGE_KEYS.profile, JSON.stringify(profile));
+    if (profile && profile.id) localStorage.setItem("campusboard.activeUserId", String(profile.id));
   }
 
   function clearProfile() {
     localStorage.removeItem(STORAGE_KEYS.profile);
+    localStorage.removeItem("campusboard.activeUserId");
   }
 
   function hasProfile() {
@@ -492,24 +494,40 @@
     avatar.title = (profile.name ? profile.name + " · " : "") + profile.role + " · " + profile.year + " · " + profile.branch + " · Section " + profile.section;
   }
 
-  function guardAuthenticatedPage() {
-    // Verify server authentication status via /api/auth/me
-    if (api && api.me) {
-      api.me().then(function (res) {
-        if (!res || !res.authenticated || !res.user) {
-          clearProfile();
-          window.location.href = "index.html";
-        } else {
-          saveProfile(res.user);
-          initAvatar();
-        }
-      });
+  function initProtectedPage(callback) {
+    document.documentElement.classList.add("auth-checking");
+    if (!api || !api.me) {
+      clearProfile();
+      window.location.replace("index.html");
+      return;
     }
 
-    if (!hasProfile()) {
-      window.location.href = "index.html";
-      return false;
-    }
+    api.me().then(function (res) {
+      if (!res || !res.authenticated || !res.user) {
+        clearProfile();
+        window.location.replace("index.html");
+        return;
+      }
+
+      // Server is authoritative source of truth
+      saveProfile(res.user);
+      document.documentElement.classList.remove("auth-checking");
+
+      initAvatar();
+      initSearch();
+      initNotifications();
+
+      if (typeof callback === "function") {
+        callback(res.user);
+      }
+    }).catch(function () {
+      clearProfile();
+      window.location.replace("index.html");
+    });
+  }
+
+  function guardAuthenticatedPage(callback) {
+    initProtectedPage(callback);
     return true;
   }
 
@@ -579,11 +597,8 @@
     }
   }
 
-  function initAppHeader() {
-    if (!guardAuthenticatedPage()) return false;
-    initAvatar();
-    initSearch();
-    initNotifications();
+  function initAppHeader(callback) {
+    initProtectedPage(callback);
     return true;
   }
 
@@ -888,7 +903,7 @@
       return fetch(API_BASE + "/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify(data)
       }).then(function(r) { return r.json(); });
     },
@@ -896,7 +911,7 @@
       return fetch(API_BASE + "/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify(credentials)
       }).then(function(r) { return r.json(); });
     },
@@ -904,19 +919,19 @@
       return fetch(API_BASE + "/api/auth/logout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin"
+        credentials: "include"
       }).then(function(r) { return r.json(); });
     },
     me: function() {
       return fetch(API_BASE + "/api/auth/me", {
-        credentials: "same-origin"
+        credentials: "include"
       }).then(function(r) {
         if (!r.ok) return { authenticated: false };
         return r.json();
       }).catch(function() { return { authenticated: false }; });
     },
     getNotices: function() {
-      return fetch(API_BASE + "/api/notices", { credentials: "same-origin" })
+      return fetch(API_BASE + "/api/notices", { credentials: "include" })
         .then(function(r) { return r.json(); })
         .catch(function() { return null; });
     },
@@ -924,19 +939,30 @@
       return fetch(API_BASE + "/api/notices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify(notice)
       })
-      .then(function(r) { return r.json(); })
+      .then(function(r) {
+        if (r.status === 403) {
+          toast("Access denied: Class Representative authorization required.");
+          return { error: "CR access required", status: 403 };
+        }
+        if (r.status === 401) {
+          clearProfile();
+          window.location.replace("index.html");
+          return { error: "Authentication required", status: 401 };
+        }
+        return r.json();
+      })
       .catch(function() { return null; });
     },
     getOpportunities: function() {
-      return fetch(API_BASE + "/api/opportunities", { credentials: "same-origin" })
+      return fetch(API_BASE + "/api/opportunities", { credentials: "include" })
         .then(function(r) { return r.json(); })
         .catch(function() { return null; });
     },
     getCalendarEvents: function() {
-      return fetch(API_BASE + "/api/calendar/events", { credentials: "same-origin" })
+      return fetch(API_BASE + "/api/calendar/events", { credentials: "include" })
         .then(function(r) { return r.json(); })
         .catch(function() { return null; });
     },
@@ -944,34 +970,66 @@
       return fetch(API_BASE + "/api/calendar/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify(evt)
       })
-      .then(function(r) { return r.json(); })
+      .then(function(r) {
+        if (r.status === 403) {
+          toast("Access denied: Class Representative authorization required.");
+          return { error: "CR access required", status: 403 };
+        }
+        if (r.status === 401) {
+          clearProfile();
+          window.location.replace("index.html");
+          return { error: "Authentication required", status: 401 };
+        }
+        return r.json();
+      })
       .catch(function() { return null; });
     },
     getProfile: function() {
-      return fetch(API_BASE + "/api/users/profile", { credentials: "same-origin" })
-        .then(function(r) { return r.json(); })
+      return fetch(API_BASE + "/api/users/profile", { credentials: "include" })
+        .then(function(r) {
+          if (r.status === 401) {
+            clearProfile();
+            window.location.replace("index.html");
+            return null;
+          }
+          return r.json();
+        })
         .catch(function() { return null; });
     },
     postProfile: function(profile) {
       return fetch(API_BASE + "/api/users/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify(profile)
       })
-      .then(function(r) { return r.json(); })
+      .then(function(r) {
+        if (r.status === 401) {
+          clearProfile();
+          window.location.replace("index.html");
+          return null;
+        }
+        return r.json();
+      })
       .catch(function() { return null; });
     },
     parseAnnouncement: function (text) {
       return fetch(API_BASE + "/api/ai/parse-announcement", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ text: text, current_date: TODAY.toISOString().slice(0, 10) })
       })
-      .then(function (res) { return res.json(); })
+      .then(function (res) {
+        if (res.status === 403) {
+          toast("Access denied: CR permissions required for AI parsing.");
+          return null;
+        }
+        return res.json();
+      })
       .then(function (data) {
         if (data && data.success && data.parsed) return data.parsed;
         throw new Error("API parsing returned invalid payload");
@@ -989,6 +1047,7 @@
       return fetch(API_BASE + "/api/ai/prioritize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ profile: profile, items: items })
       })
       .then(function (res) { return res.json(); })
@@ -1006,9 +1065,16 @@
       return fetch(API_BASE + "/api/ai/chat-digest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ chat_text: chatText })
       })
-      .then(function (res) { return res.json(); })
+      .then(function (res) {
+        if (res.status === 403) {
+          toast("Access denied: CR permissions required for Chat Digest.");
+          return null;
+        }
+        return res.json();
+      })
       .then(function (data) {
         if (data && data.success && data.digest) return data.digest;
         throw new Error("API chat digest error");
@@ -1023,6 +1089,7 @@
       return fetch(API_BASE + "/api/ai/briefing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ profile: profile, announcements: announcements, opportunities: opportunities, events: events })
       })
       .then(function (res) { return res.json(); })
@@ -1031,8 +1098,17 @@
         throw new Error("API daily briefing error");
       })
       .catch(function (err) {
-        console.warn("Backend AI briefing unavailable:", err);
-        return null;
+        console.warn("Backend AI briefing unavailable; using local briefing fallback:", err);
+        var urgent = (announcements || []).filter(function (a) { return a.priority === "high" || a.deadline; }).slice(0, 2);
+        var liked = (opportunities || []).filter(function (o) {
+          return (profile.interests || []).some(function (i) { return String(o.category || "").toLowerCase().indexOf(String(i).toLowerCase()) !== -1; });
+        }).slice(0, 2);
+        return {
+          headline: urgent.length ? urgent.length + " things you should not miss today" : "Your campus board for today",
+          must_know: urgent.map(function (a) { return { title: a.title, meta: "Due " + (a.deadline || "soon") + " · " + (a.category || "UPDATE"), level: a.priority === "high" ? "red" : "yellow" }; }),
+          might_like: liked.map(function (o) { return { title: o.title, reason: "Matches your interests" }; }),
+          ai_generated: false
+        };
       });
     },
 
@@ -1040,6 +1116,7 @@
       return fetch(API_BASE + "/api/ai/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ question: question, profile: profile, context: context })
       })
       .then(function (res) { return res.json(); })
@@ -1168,6 +1245,7 @@
     initAppHeader: initAppHeader,
     initAskCampusBoard: initAskCampusBoard,
     guardAuthenticatedPage: guardAuthenticatedPage,
+    initProtectedPage: initProtectedPage,
     ui: {
       renderInfoCards: renderInfoCards,
       openDetailModal: openDetailModal,
@@ -1176,9 +1254,26 @@
     }
   };
 
+  function initSignOutButtons() {
+    document.querySelectorAll(".js-sign-out, [data-action='logout'], #sign-out-btn").forEach(function(btn) {
+      btn.addEventListener("click", function(e) {
+        e.preventDefault();
+        api.logout().then(function() {
+          clearProfile();
+          window.location.replace("index.html");
+        }).catch(function() {
+          clearProfile();
+          window.location.replace("index.html");
+        });
+      });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function() {
     initMobileNav();
     initAskCampusBoard();
     initSignInModal();
+    initSignOutButtons();
   });
 })(window);
+

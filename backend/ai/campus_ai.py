@@ -30,7 +30,7 @@ class CampusAI:
     def is_available(self):
         return self.client is not None
 
-    def generate_json(self, prompt, schema=None, model="gemini-3.5-flash"):
+    def generate_json(self, prompt, schema=None, model="gemini-3.6-flash"):
         """
         Generates structured JSON using Gemini SDK.
         Returns parsed dict/list or None if error/unavailable.
@@ -65,7 +65,18 @@ class CampusAI:
                 
                 return json.loads(cleaned_text.strip())
         except Exception as e:
-            logger.error(f"Gemini API error in generate_json: {e}")
+            logger.error(f"Gemini API error in generate_json ({model}): {e}")
+            if model != "gemini-3.6-flash":
+                try:
+                    response = self.client.models.generate_content(
+                        model="gemini-3.6-flash",
+                        contents=prompt,
+                        config=config
+                    )
+                    if response and response.text:
+                        return json.loads(response.text.strip().strip("`").replace("json\n", "", 1))
+                except Exception as retry_error:
+                    logger.error(f"Gemini JSON retry failed: {retry_error}")
             return None
 
     def generate_text(self, prompt, model="gemini-3.6-flash"):

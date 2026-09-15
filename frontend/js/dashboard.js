@@ -5,14 +5,13 @@
 (function () {
   "use strict";
 
-  if (!CB.initAppHeader()) return; // redirects to index.html if no profile
-  CB.ui.initPolaroid();
-  CB.ui.initPolaroidAdder(document.getElementById("campus-corner-polaroids"), "dashboard", document.getElementById("campus-corner-add"));
+  CB.initProtectedPage(function (profile) {
+    CB.ui.initPolaroid();
+    CB.ui.initPolaroidAdder(document.getElementById("campus-corner-polaroids"), "dashboard", document.getElementById("campus-corner-add"));
 
-  var profile = CB.storage.getProfile();
-  var announcements = CB.data.getAllAnnouncements();
-  var opportunities = CB.data.opportunities;
-  var classLabel = profile.year + " · " + profile.branch + " · Section " + profile.section;
+    var announcements = CB.data.getAllAnnouncements();
+    var opportunities = CB.data.opportunities;
+    var classLabel = profile.year + " · " + profile.branch + " · Section " + profile.section;
 
   var hour = new Date().getHours();
   var greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -34,7 +33,9 @@
   function renderDailyBriefing() {
     var events = CB.data.getAllEvents();
     CB.api.dailyBriefing(profile, announcements, opportunities, events).then(function (res) {
-      if (!res) return;
+      if (!res) {
+        res = { headline: "Your campus board for today", must_know: [], might_like: [], ai_generated: false };
+      }
       var headline = document.getElementById("briefing-headline");
       var mustKnowList = document.getElementById("briefing-must-know-list");
       var mightLikeList = document.getElementById("briefing-might-like-list");
@@ -131,9 +132,12 @@
 
   /* ---------------- CR tools: natural-language AI announcement flow ---------------- */
 
-  if (profile.role === "Class Representative") {
-    document.getElementById("cr-tools").hidden = false;
+  var crToolsEl = document.getElementById("cr-tools");
+  if (crToolsEl) {
+    crToolsEl.hidden = (profile.role !== "Class Representative");
+  }
 
+  if (profile.role === "Class Representative") {
     var postModal = document.getElementById("post-modal");
     var rawInput = document.getElementById("ai-raw-input");
     var understandBtn = document.getElementById("ai-understand-btn");
@@ -390,6 +394,7 @@
       }
     }
   }
+  });
 })();
 
 

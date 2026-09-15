@@ -5,10 +5,8 @@
 (function () {
   "use strict";
 
-  if (!CB.initAppHeader()) return;
-
-  var profile = CB.storage.getProfile();
-  var allAnnouncements = CB.data.getAllAnnouncements();
+  CB.initProtectedPage(function (profile) {
+    var allAnnouncements = CB.data.getAllAnnouncements();
 
   var state = {
     query: "",
@@ -141,15 +139,16 @@
   render();
 
   CB.api.getNotices().then(function (res) {
-    if (
-      res &&
-      res.success === true &&
-      res.source === "database" &&
-      res.notices &&
-      res.notices.length
-    ) {
+    // Keep the polished demo/sample announcements when the database is empty.
+    if (res && Array.isArray(res.notices) && res.notices.length) {
       allAnnouncements = res.notices.map(mapNotice);
       render();
+    } else {
+      render();
     }
+  }).catch(function () {
+    // API failure must never blank the page.
+    render();
+  });
   });
 })();

@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify
 from backend.ai import parser, prioritizer, summarizer, assistant, campus_ai
+from backend.security import login_required, cr_required, get_current_user
+from backend.routes.auth import format_user_profile
 
 ai_bp = Blueprint('ai', __name__)
 
@@ -11,6 +13,7 @@ def ai_status():
     })
 
 @ai_bp.route('/api/ai/parse-announcement', methods=['POST'])
+@cr_required
 def parse_announcement():
     data = request.get_json() or {}
     text = data.get('text', '')
@@ -24,9 +27,16 @@ def parse_announcement():
     })
 
 @ai_bp.route('/api/ai/prioritize', methods=['POST'])
+@login_required
 def prioritize():
+    user = get_current_user()
+    profile = format_user_profile(user) if user else {}
     data = request.get_json() or {}
-    profile = data.get('profile', {})
+    # If client passed interests/profile overrides, merge safely with authoritative user
+    client_profile = data.get('profile', {})
+    if isinstance(client_profile, dict) and client_profile.get('interests'):
+        profile['interests'] = client_profile['interests']
+
     items = data.get('items', [])
     results = prioritizer.prioritize_items(profile, items)
     return jsonify({
@@ -36,6 +46,7 @@ def prioritize():
     })
 
 @ai_bp.route('/api/ai/chat-digest', methods=['POST'])
+@login_required
 def chat_digest():
     data = request.get_json() or {}
     chat_text = data.get('chat_text', '')
@@ -47,9 +58,11 @@ def chat_digest():
     })
 
 @ai_bp.route('/api/ai/briefing', methods=['POST'])
+@login_required
 def briefing():
+    user = get_current_user()
+    profile = format_user_profile(user) if user else {}
     data = request.get_json() or {}
-    profile = data.get('profile', {})
     announcements = data.get('announcements', [])
     opportunities = data.get('opportunities', [])
     events = data.get('events', [])
@@ -61,10 +74,12 @@ def briefing():
     })
 
 @ai_bp.route('/api/ai/ask', methods=['POST'])
+@login_required
 def ask():
+    user = get_current_user()
+    profile = format_user_profile(user) if user else {}
     data = request.get_json() or {}
     question = data.get('question', '')
-    profile = data.get('profile', {})
     context = data.get('context', {})
     result = assistant.ask(question, profile, context)
     return jsonify({

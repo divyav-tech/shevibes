@@ -2513,3 +2513,9 @@ body.modal-open {
   .profile-photo-row { justify-content: center; text-align: center; }
   .profile-photo-info { text-align: center; }
 }
+
+/* Authentication Guard — prevent content flash before /api/auth/me resolves */
+html.auth-checking body {
+  visibility: hidden;
+}
+

@@ -132,11 +132,15 @@
   }
 
   CB.api.getOpportunities().then(function (res) {
-    if (res && Array.isArray(res.opportunities)) {
+    if (res && Array.isArray(res.opportunities) && res.opportunities.length) {
       allOpportunities = res.opportunities.map(mapOpportunity);
     } else {
-      allOpportunities = [];
+      // Keep the built-in campus opportunities when the database is empty/offline.
+      allOpportunities = (CB.data.opportunities || []).slice();
     }
+    render();
+  }).catch(function () {
+    allOpportunities = (CB.data.opportunities || []).slice();
     render();
   });
 })();

@@ -346,16 +346,16 @@
     : Promise.resolve(null);
 
   Promise.resolve(request).then(function (res) {
-    if (res && Array.isArray(res.events)) {
+    if (res && Array.isArray(res.events) && res.events.length) {
       campusEvents = res.events.map(mapCalendarEvent);
     } else {
-      console.error("Calendar events API failed or returned invalid data", res);
-      campusEvents = [];
+      // Keep demo deadlines/events visible when DB has no seeded calendar rows.
+      campusEvents = (CB.data.events || []).map(mapCalendarEvent);
     }
     renderMonth();
   }).catch(function (err) {
-    console.error("Calendar events API failed", err);
-    campusEvents = [];
+    console.warn("Calendar events API unavailable; using local campus events", err);
+    campusEvents = (CB.data.events || []).map(mapCalendarEvent);
     renderMonth();
   });
 })();

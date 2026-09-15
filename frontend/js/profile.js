@@ -112,6 +112,23 @@
     CB.util.toast("Profile updated");
   });
 
+  var signOutBtn = document.getElementById("sign-out");
+  if (signOutBtn) {
+    signOutBtn.addEventListener("click", function () {
+      if (!window.confirm("Sign out of Campus Board?")) return;
+      signOutBtn.disabled = true;
+      var finish = function () {
+        CB.storage.clearProfile();
+        window.location.href = "index.html";
+      };
+      if (CB.api && CB.api.logout) {
+        CB.api.logout().then(finish).catch(finish);
+      } else {
+        finish();
+      }
+    });
+  }
+
   var resetBtn = document.getElementById("reset-personalization");
   if (resetBtn) {
     resetBtn.addEventListener("click", function () {

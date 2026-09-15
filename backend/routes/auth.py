@@ -83,7 +83,7 @@ def register():
         # Check DB first
         existing_user = db.fetch_one("SELECT id FROM users WHERE college_email = %s", (college_email,))
         if existing_user:
-            return jsonify({'error': 'This college email is already registered. Please sign in instead.'}), 400
+            return jsonify({'error': 'This college email is already registered. Please sign in instead.'}), 409
 
         cursor = db.execute_query("""
             INSERT INTO users (name, college_email, password_hash, college, year, branch, section, role)
@@ -114,7 +114,7 @@ def register():
     global _in_memory_id_counter
     for u in _in_memory_users.values():
         if u['college_email'] == college_email:
-            return jsonify({'error': 'This college email is already registered. Please sign in instead.'}), 400
+            return jsonify({'error': 'This college email is already registered. Please sign in instead.'}), 409
 
     user_id = _in_memory_id_counter
     _in_memory_id_counter += 1
@@ -177,7 +177,7 @@ def login():
 
 @auth_bp.route('/api/auth/logout', methods=['POST'])
 def logout():
-    session.pop('user_id', None)
+    session.clear()
     return jsonify({'message': 'Logged out successfully'}), 200
 
 @auth_bp.route('/api/auth/me', methods=['GET'])
@@ -205,7 +205,7 @@ def get_me():
         interests = user_row.get('interests', [])
 
     if not user_row:
-        session.pop('user_id', None)
+        session.clear()
         return jsonify({'authenticated': False, 'user': None}), 401
 
     profile = format_user_profile(user_row, interests)
