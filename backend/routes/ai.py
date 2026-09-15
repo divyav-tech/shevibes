@@ -16,10 +16,11 @@ def parse_announcement():
     text = data.get('text', '')
     current_date = data.get('current_date', '2026-09-12')
     result = parser.parse_announcement(text, current_date)
+    ai_used = result.pop('_ai_used', campus_ai.is_available())
     return jsonify({
         "success": True,
         "parsed": result,
-        "ai_used": campus_ai.is_available()
+        "ai_used": ai_used
     })
 
 @ai_bp.route('/api/ai/prioritize', methods=['POST'])
