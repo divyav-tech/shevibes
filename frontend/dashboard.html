@@ -28,7 +28,7 @@
       <a href="dashboard.html" class="is-current">Home</a>
       <a href="announcements.html">Announcements</a>
       <a href="opportunities.html">Opportunities</a>
-      <a href="calendar.html">Calendar</a>
+      <a href="calendar.html">Calendar</a><a href="timetable.html">Timetable</a>
       <a href="past-events.html">Past Events</a>
       <a href="profile.html">My Profile</a>
     </nav>
@@ -155,6 +155,7 @@
       <button class="cr-tool-btn" type="button" id="cr-post-announcement">+ Post Announcement</button>
       <button class="cr-tool-btn" type="button" id="cr-add-deadline">+ Add Deadline</button>
       <button class="cr-tool-btn" type="button" id="cr-add-event">+ Add Class Event</button>
+      <a class="cr-tool-btn" id="cr-build-timetable" href="timetable.html">✦ Build Timetable</a>
       <button class="cr-tool-btn" type="button" id="cr-chat-digest-btn">✦ AI Chat Digest</button>
     </div>
   </section>
@@ -268,8 +269,13 @@
           </select>
         </div>
         <div class="ai-result-field">
-          <label>Class</label>
-          <input id="ai-field-class" type="text" disabled>
+          <label for="ai-field-audience">Post to</label>
+          <select id="ai-field-audience" disabled>
+            <option value="__CLASS__">My class — Section A</option>
+            <option value="__YEAR_BRANCH__">My year · all sections</option>
+            <option value="__BRANCH__">All CSE students</option>
+            <option value="All Students">All students</option>
+          </select>
         </div>
         <div class="ai-result-field ai-result-checkbox">
           <input id="ai-field-calendar" type="checkbox" disabled>

@@ -10,36 +10,63 @@ notices_bp = Blueprint('notices', __name__)
 # In-memory storage for local mode
 _in_memory_notices = []
 
+def _audience_matches(audience, user):
+    if not audience or audience in ('All Students', 'College-wide'):
+        return True
+    if not user:
+        return False
+    year = user.get('year', '')
+    branch = user.get('branch', '')
+    section = user.get('section', '')
+    exact = f"{year} · {branch} · Section {section}"
+    return audience in (
+        exact,
+        f"{year} · {branch} · All Sections",
+        f"{branch} · All Years",
+        f"{year} · All Branches"
+    )
+
 @notices_bp.route('/api/notices', methods=['GET'])
 def get_notices():
+    user = get_current_user()
+    combined = []
     try:
         rows = db.fetch_all("SELECT * FROM announcements ORDER BY created_at DESC")
-        if rows:
-            for r in rows:
-                if isinstance(r.get('tags'), str):
-                    try:
-                        r['tags'] = json.loads(r['tags'])
-                    except Exception:
-                        r['tags'] = []
-            return jsonify({'notices': rows, 'source': 'database', 'success': True})
+        for r in rows or []:
+            if isinstance(r.get('tags'), str):
+                try:
+                    r['tags'] = json.loads(r['tags'])
+                except Exception:
+                    r['tags'] = []
+            if _audience_matches(r.get('class_name'), user):
+                combined.append(r)
     except Exception as e:
         logger.error(f"DB Error in get_notices: {e}")
 
-    if _in_memory_notices:
-        return jsonify({'notices': _in_memory_notices, 'source': 'local', 'success': True})
-
-    # Keep the demo experience populated when MySQL has not been seeded yet.
+    # Demo/sample content intentionally remains available so a fresh deployment
+    # still looks populated. Real DB announcements are shown alongside it.
     try:
         import os
         sample_path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'sample_notices.json')
         with open(sample_path, 'r', encoding='utf-8') as fh:
             sample_notices = json.load(fh)
         if isinstance(sample_notices, list):
-            return jsonify({'notices': sample_notices, 'source': 'demo', 'success': True})
+            combined.extend([n for n in sample_notices if _audience_matches(n.get('class_name') or n.get('forClass'), user)])
     except Exception as e:
         logger.warning(f'Could not load sample notices: {e}')
 
-    return jsonify({'notices': [], 'source': 'local', 'success': True})
+    combined.extend([n for n in _in_memory_notices if _audience_matches(n.get('class_name') or n.get('forClass'), user)])
+    # De-duplicate by title + deadline so local/demo and DB records don't create
+    # an awkward duplicate card during development.
+    seen = set()
+    unique = []
+    for item in combined:
+        key = (str(item.get('title','')).strip().lower(), str(item.get('deadline') or ''))
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(item)
+    return jsonify({'notices': unique, 'source': 'database+demo' if unique else 'empty', 'success': True})
 
 @notices_bp.route('/api/notices', methods=['POST'])
 @cr_required

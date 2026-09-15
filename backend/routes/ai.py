@@ -87,3 +87,29 @@ def ask():
         "result": result,
         "ai_used": campus_ai.is_available()
     })
+
+
+@ai_bp.route('/api/ai/parse-timetable', methods=['POST'])
+@cr_required
+def parse_timetable():
+    image = request.files.get('image')
+    if not image:
+        return jsonify({'success': False, 'error': 'Please upload a timetable image.'}), 400
+    raw = image.read()
+    if not raw:
+        return jsonify({'success': False, 'error': 'The uploaded image is empty.'}), 400
+    mime = image.mimetype or 'image/png'
+    if not mime.startswith('image/'):
+        return jsonify({'success': False, 'error': 'Please upload an image file.'}), 400
+    if len(raw) > 8 * 1024 * 1024:
+        return jsonify({'success': False, 'error': 'Please keep the timetable image under 8 MB.'}), 400
+    prompt = """
+You are extracting a college timetable from a timetable image. Return ONLY valid JSON with this exact shape:
+{"entries":[{"day":"Monday","start":"09:00","end":"10:00","subject":"BEE","faculty":"","room":""}]}
+Rules: identify every class cell you can read; use Monday-Friday when shown; preserve times; do not invent faculty/room; if a value is unreadable use an empty string; keep subjects concise; sort entries by weekday then start time. This will be reviewed and edited by a Class Representative before publishing.
+"""
+    result = campus_ai.generate_json_with_image(prompt, raw, mime_type=mime)
+    if result and isinstance(result.get('entries'), list):
+        return jsonify({'success': True, 'parsed': result, 'ai_used': True})
+    # Graceful demo fallback: the frontend supplies a polished sample table if AI is unavailable.
+    return jsonify({'success': True, 'parsed': {'entries': []}, 'ai_used': False, 'message': 'AI is unavailable right now. You can enter the timetable manually.'})

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Timetable — Campus Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Archivo:wght@400;500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/dashboard.css">
+<link rel="stylesheet" href="css/pages.css">
+</head>
+<body class="app-body">
+<header class="app-header">
+  <div class="app-header-inner">
+    <a class="wordmark" href="dashboard.html">Campus Board</a>
+    <nav class="main-nav" id="app-nav">
+      <a href="dashboard.html">Home</a><a href="announcements.html">Announcements</a><a href="opportunities.html">Opportunities</a><a href="calendar.html">Calendar</a><a href="timetable.html" class="is-current">Timetable</a><a href="past-events.html">Past Events</a><a href="profile.html">My Profile</a>
+    </nav>
+    <div class="app-header-actions">
+      <div class="app-search"><input type="search" id="global-search" placeholder="Search announcements, opportunities…" aria-label="Search Campus Board"><div class="app-search-results" id="search-results" hidden></div></div>
+      <div class="app-notif"><button class="notif-btn" id="notif-btn" aria-haspopup="true" aria-expanded="false" aria-label="Notifications">🔔<span class="notif-dot" id="notif-dot" hidden></span></button><div class="notif-dropdown" id="notif-dropdown" hidden><div class="notif-dropdown-head"><span>Notifications</span><button type="button" id="notif-mark-all">Mark all as read</button></div><div class="notif-list" id="notif-list"></div></div></div>
+      <a class="app-avatar" href="profile.html" id="app-avatar">S</a><button class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="app-nav" aria-label="Open menu"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+
+<main class="dash-main timetable-page">
+  <div class="page-head timetable-head">
+    <div><span class="hand-note">your week, untangled ✦</span><h1>Timetable</h1><p id="timetable-subtitle">Your class schedule, cleaned up and ready to follow.</p></div>
+    <span class="timetable-ai-note">✦ AI read · CR approved</span>
+  </div>
+
+  <section class="timetable-paper" aria-label="Class timetable">
+    <div class="timetable-paper-top"><div><span class="hand-note">this week</span><h2 id="timetable-title">Loading timetable…</h2></div><div class="timetable-updated" id="timetable-updated"></div></div>
+    <div id="timetable-empty" class="timetable-empty" hidden><div class="past-empty-mark">✦</div><h3>No timetable published yet</h3><p>Your CR can upload a timetable and let AI turn it into this board.</p></div>
+    <div class="timetable-scroll timetable-week-scroll">
+      <div id="timetable-body" class="timetable-week" aria-label="Weekly class schedule"></div>
+    </div>
+  </section>
+
+  <section class="timetable-cr-panel" id="timetable-cr-panel" hidden>
+    <div class="section-divider" style="margin-top:38px;"><span class="hand-note">class rep corner ✦</span><h2>Build the class timetable</h2><p>Upload the timetable image. AI will read it, then you can fix anything before publishing.</p></div>
+    <div class="timetable-builder">
+      <div class="timetable-upload-card">
+        <input type="file" id="timetable-image" accept="image/*" hidden>
+        <label for="timetable-image" class="timetable-upload-drop"><span class="upload-icon">↑</span><strong>Upload timetable photo</strong><small>PNG, JPG or WEBP</small></label>
+        <p id="timetable-file-name" class="timetable-file-name"></p>
+        <button class="btn btn-primary" id="timetable-ai-btn" type="button" disabled>✦ Read with AI</button>
+        <p id="timetable-ai-status" class="timetable-ai-status"></p>
+      </div>
+      <div class="timetable-edit-card">
+        <div class="timetable-edit-head"><div><span class="hand-note">review before it goes out</span><h3>AI timetable draft</h3></div><button class="btn btn-ghost btn-small" id="timetable-add-row" type="button">+ Add row</button></div>
+        <div class="timetable-scroll"><table class="timetable-table timetable-edit-table"><thead><tr><th>Day</th><th>Start</th><th>End</th><th>Subject</th><th>Faculty</th><th>Room</th><th></th></tr></thead><tbody id="timetable-edit-body"></tbody></table></div>
+        <div class="timetable-publish-row"><select id="timetable-audience"><option value="__CLASS__">My class</option><option value="__YEAR_BRANCH__">My year · all sections</option><option value="__BRANCH__">My branch · all years</option><option value="All Students">All students</option></select><button class="btn btn-primary" id="timetable-publish" type="button">Publish approved timetable →</button></div>
+      </div>
+    </div>
+  </section>
+</main>
+<script src="js/main.js"></script><script src="js/timetable.js"></script>
+</body></html>

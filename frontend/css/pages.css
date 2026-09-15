@@ -170,3 +170,84 @@
 .past-empty-mark { font-size:1.8rem; color:var(--color-accent); }
 .past-events-empty h3 { margin-top:9px; font-family:var(--font-display); font-size:1.15rem; }
 .past-events-empty p { margin-top:5px; color:var(--color-text-muted); font-size:.82rem; }
+
+
+/* ---------------- TIMETABLE ---------------- */
+.timetable-page { position:relative; }
+.timetable-head { display:flex; justify-content:space-between; align-items:flex-end; gap:18px; flex-wrap:wrap; }
+.timetable-ai-note { font-family:var(--font-hand); font-size:1rem; color:var(--color-olive); transform:rotate(-2deg); background:#fffdf5; padding:6px 10px; border-radius:4px; box-shadow:0 2px 0 rgba(87,85,39,.08); }
+.timetable-paper { background:#f4f3e1; border:1px solid rgba(87,85,39,.14); border-radius:15px; box-shadow:var(--shadow-paper); padding:24px; position:relative; overflow:hidden; }
+.timetable-paper::before { content:""; position:absolute; inset:0; pointer-events:none; opacity:.34; background-image:radial-gradient(circle at 1px 1px, rgba(87,85,39,.16) 1px, transparent 1.25px); background-size:17px 17px; }
+.timetable-paper::after { content:"TIMETABLE"; position:absolute; top:18px; right:28px; font:600 .58rem var(--font-body); letter-spacing:.16em; color:rgba(87,85,39,.28); transform:rotate(3deg); }
+.timetable-paper-top { position:relative; display:flex; justify-content:space-between; align-items:flex-end; gap:18px; margin-bottom:20px; }
+.timetable-paper-top h2 { margin-top:3px; font-size:1.45rem; font-weight:500; }
+.timetable-updated { font-size:.72rem; color:var(--color-text-muted); }
+.timetable-scroll { position:relative; overflow-x:auto; scrollbar-width:thin; }
+
+/* Student timetable: colorful weekly columns, inspired by a handmade planner rather than a spreadsheet. */
+.timetable-week-scroll { padding:5px 4px 16px; }
+.timetable-week { display:grid; grid-template-columns:repeat(5,minmax(170px,1fr)); gap:12px; min-width:900px; align-items:start; }
+.timetable-day-column { position:relative; min-height:430px; }
+.timetable-day-column::before { content:""; position:absolute; width:58px; height:16px; top:-5px; left:50%; transform:translateX(-50%) rotate(var(--day-rot)); background:rgba(236,196,195,.7); border-radius:2px; z-index:2; box-shadow:0 1px 2px rgba(54,43,29,.08); }
+.timetable-day-column:nth-child(2)::before,.timetable-day-column:nth-child(5)::before { background:rgba(146,190,94,.42); }
+.timetable-day-column:nth-child(3)::before { background:rgba(185,125,123,.48); }
+.timetable-day-column:nth-child(4)::before { background:rgba(221,211,201,.9); }
+.timetable-day-tab { min-height:61px; padding:17px 13px 10px; display:flex; align-items:center; gap:9px; border-radius:11px 11px 5px 5px; background:#fffdf5; border:1px solid rgba(87,85,39,.12); box-shadow:0 4px 0 rgba(87,85,39,.07); position:relative; overflow:hidden; }
+.timetable-day-tab::after { content:""; position:absolute; width:70px; height:70px; border-radius:50%; right:-28px; top:-35px; background:rgba(236,196,195,.22); }
+.timetable-day-column:nth-child(2) .timetable-day-tab::after,.timetable-day-column:nth-child(5) .timetable-day-tab::after { background:rgba(146,190,94,.16); }
+.timetable-day-column:nth-child(3) .timetable-day-tab::after { background:rgba(185,125,123,.18); }
+.timetable-day-tab span { display:grid; place-items:center; width:31px; height:31px; flex:0 0 31px; border-radius:50%; background:#b68680; color:#fffdf5; font:700 .58rem var(--font-body); letter-spacing:.04em; position:relative; z-index:1; }
+.timetable-day-column:nth-child(2) .timetable-day-tab span,.timetable-day-column:nth-child(5) .timetable-day-tab span { background:#575527; }
+.timetable-day-column:nth-child(3) .timetable-day-tab span { background:#7e745b; }
+.timetable-day-column:nth-child(4) .timetable-day-tab span { background:#362b1d; }
+.timetable-day-tab strong { font:600 .93rem var(--font-display); color:var(--color-text); position:relative; z-index:1; }
+.timetable-day-tab i { margin-left:auto; font-style:normal; color:#b97d7b; font-size:.8rem; transform:rotate(8deg); position:relative; z-index:1; }
+.timetable-day-stack { display:flex; flex-direction:column; gap:9px; padding:10px 2px 4px; }
+.timetable-class-card { position:relative; border-radius:9px; padding:12px 12px 11px; border:1px solid rgba(54,43,29,.12); box-shadow:2px 3px 0 rgba(54,43,29,.08), 0 5px 13px rgba(54,43,29,.06); transform:rotate(var(--card-rot)); transition:transform .18s ease, box-shadow .18s ease; overflow:hidden; }
+.timetable-class-card::before { content:""; position:absolute; width:8px; height:8px; border-radius:50%; right:9px; top:9px; background:rgba(54,43,29,.18); box-shadow:0 0 0 3px rgba(255,255,255,.28); }
+.timetable-class-card:hover { transform:rotate(0deg) translateY(-3px); box-shadow:3px 6px 0 rgba(54,43,29,.09), 0 9px 18px rgba(54,43,29,.08); }
+.timetable-class-card.subject-tone-0 { background:#f4c7d0; }
+.timetable-class-card.subject-tone-1 { background:#d7dab0; }
+.timetable-class-card.subject-tone-2 { background:#cddbbf; }
+.timetable-class-card.subject-tone-3 { background:#efc8c7; }
+.timetable-class-card.subject-tone-4 { background:#e9dfcc; }
+.timetable-class-card.subject-tone-5 { background:#c9d9c0; }
+.timetable-class-time { display:flex; align-items:center; gap:4px; font:600 .62rem var(--font-body); color:rgba(54,43,29,.72); letter-spacing:.01em; }
+.timetable-class-time b { font-weight:400; opacity:.55; }
+.timetable-class-card h3 { margin:7px 16px 6px 0; font:600 .91rem var(--font-display); line-height:1.12; color:#362b1d; }
+.timetable-class-meta { display:flex; flex-direction:column; gap:3px; font-size:.61rem; line-height:1.25; color:rgba(54,43,29,.68); }
+.timetable-class-meta span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.timetable-empty { position:relative; text-align:center; padding:45px 20px; }
+.timetable-empty h3 { margin-top:8px; font-size:1.15rem; }
+.timetable-empty p { margin-top:5px; color:var(--color-text-muted); font-size:.82rem; }
+
+/* CR builder remains a practical editor, but follows the same paper/scrapbook language. */
+.timetable-builder { display:grid; grid-template-columns:260px 1fr; gap:18px; align-items:start; }
+.timetable-upload-card, .timetable-edit-card { background:#f4f3e1; border:1px solid rgba(87,85,39,.12); border-radius:12px; padding:18px; box-shadow:var(--shadow-paper-soft); }
+.timetable-upload-card { transform:rotate(-.35deg); }
+.timetable-edit-card { transform:rotate(.2deg); }
+.timetable-upload-drop { min-height:150px; border:2px dashed rgba(182,134,128,.58); border-radius:10px; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; cursor:pointer; background:#eededc; transition:transform .18s ease, background .18s ease; }
+.timetable-upload-drop:hover { transform:rotate(-1deg) translateY(-2px); background:#ecc4c3; }
+.upload-icon { width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:#b97d7b; color:#fffdf5; font-size:1.25rem; margin-bottom:8px; box-shadow:0 3px 0 rgba(54,43,29,.12); }
+.timetable-upload-drop strong { font-size:.85rem; }
+.timetable-upload-drop small { color:var(--color-text-muted); margin-top:4px; }
+.timetable-file-name { min-height:18px; margin:9px 0; font-size:.72rem; color:var(--color-text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.timetable-ai-status { min-height:22px; margin-top:10px; font-size:.72rem; color:var(--color-text-muted); }
+.timetable-edit-head { display:flex; justify-content:space-between; align-items:flex-end; gap:12px; margin-bottom:10px; }
+.timetable-edit-head h3 { font-size:1.05rem; margin-top:2px; }
+.timetable-edit-table { min-width:850px; width:100%; border-collapse:separate; border-spacing:0 6px; font-size:.78rem; }
+.timetable-edit-table th { text-align:left; padding:7px 8px; color:var(--color-text-muted); font-size:.63rem; text-transform:uppercase; letter-spacing:.07em; }
+.timetable-edit-table td { padding:5px; background:#fffdf5; }
+.timetable-edit-table td:first-child { border-radius:7px 0 0 7px; }
+.timetable-edit-table td:last-child { border-radius:0 7px 7px 0; }
+.timetable-edit-table input, .timetable-edit-table select, .timetable-publish-row select { width:100%; border:1px solid rgba(87,85,39,.18); background:#fffdf5; border-radius:6px; padding:7px; font:500 .72rem var(--font-body); color:var(--color-text); }
+.timetable-edit-table input:focus, .timetable-edit-table select:focus, .timetable-publish-row select:focus { outline:2px solid rgba(185,125,123,.28); border-color:#b68680; }
+.timetable-delete-row { border:0; background:transparent; color:#a23f39; font-size:1.15rem; cursor:pointer; }
+.timetable-publish-row { display:flex; justify-content:flex-end; gap:10px; align-items:center; margin-top:15px; flex-wrap:wrap; }
+.timetable-publish-row select { width:auto; min-width:210px; }
+@media (max-width:850px){
+  .timetable-builder{grid-template-columns:1fr}
+  .timetable-paper{padding:16px}
+  .timetable-paper-top{align-items:flex-start;flex-direction:column}
+  .timetable-week{min-width:820px;grid-template-columns:repeat(5,minmax(155px,1fr));gap:9px}
+}

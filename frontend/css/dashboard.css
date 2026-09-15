@@ -505,3 +505,5 @@ body.modal-open { overflow: hidden; }
 .ask-cb-panel[hidden] {
   display: none !important;
 }
+
+#cr-build-timetable { text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }

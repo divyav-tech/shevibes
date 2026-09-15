@@ -96,3 +96,17 @@ CREATE TABLE IF NOT EXISTS saved_items (
     saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
+
+
+CREATE TABLE IF NOT EXISTS timetables (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    audience VARCHAR(200) NOT NULL,
+    entries_json LONGTEXT NOT NULL,
+    source_image_name VARCHAR(255),
+    status ENUM('draft','published') DEFAULT 'draft',
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id)
+);

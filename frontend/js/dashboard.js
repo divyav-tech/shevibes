@@ -130,6 +130,30 @@
 
   renderAll();
 
+  // Hydrate the dashboard from the real community feed as soon as the page loads.
+  // The backend already applies audience targeting, so a student only receives
+  // announcements for their class/year/branch (plus campus-wide posts).
+  if (CB.api && CB.api.getNotices) {
+    CB.api.getNotices().then(function(res) {
+      if (res && Array.isArray(res.notices) && res.notices.length) {
+        announcements = res.notices.map(function(row) {
+          return {
+            id: String(row.id), title: row.title,
+            description: row.description || row.summary || row.content || '',
+            forClass: row.forClass || row.class_name || 'All Students',
+            date: String(row.created_at || row.date || '').slice(0, 10),
+            deadline: row.deadline ? String(row.deadline).slice(0, 10) : null,
+            category: row.category ? String(row.category).charAt(0).toUpperCase() + String(row.category).slice(1).toLowerCase() : 'General',
+            priority: row.priority || 'medium', source: row.source || 'Class Representative',
+            venue: row.venue || 'Not specified', aiGenerated: Boolean(row.aiGenerated || row.ai_generated),
+            tags: row.tags || []
+          };
+        }).filter(function(item) { return CB.util.audienceMatches(item.forClass, profile); });
+        renderAll();
+      }
+    }).catch(function() {});
+  }
+
   /* ---------------- CR tools: natural-language AI announcement flow ---------------- */
 
   var crToolsEl = document.getElementById("cr-tools");
@@ -153,7 +177,7 @@
       venue: document.getElementById("ai-field-venue"),
       category: document.getElementById("ai-field-category"),
       priority: document.getElementById("ai-field-priority"),
-      klass: document.getElementById("ai-field-class"),
+      audience: document.getElementById("ai-field-audience"),
       calendar: document.getElementById("ai-field-calendar")
     };
     var resultTitleDisplay = document.getElementById("ai-result-title-display");
@@ -210,7 +234,14 @@
       fields.venue.value = parsed.venue || "";
       fields.category.value = parsed.category ? (parsed.category.charAt(0).toUpperCase() + parsed.category.slice(1)) : "General";
       fields.priority.value = (parsed.priority || "medium").toLowerCase();
-      fields.klass.value = classLabel;
+      if (fields.audience) {
+        fields.audience.innerHTML =
+          '<option value="__CLASS__">My class — ' + classLabel + '</option>' +
+          '<option value="__YEAR_BRANCH__">' + profile.year + ' · ' + profile.branch + ' · All Sections</option>' +
+          '<option value="__BRANCH__">' + profile.branch + ' · All Years</option>' +
+          '<option value="All Students">All Students</option>';
+        fields.audience.value = "__CLASS__";
+      }
       fields.calendar.checked = parsed.add_to_calendar;
     }
 
@@ -271,7 +302,7 @@
         date: new Date().toISOString().slice(0, 10),
         priority: fields.priority.value,
         source: classLabel + " CR",
-        forClass: classLabel,
+        forClass: fields.audience ? (fields.audience.value === "__CLASS__" ? classLabel : fields.audience.value === "__YEAR_BRANCH__" ? profile.year + " · " + profile.branch + " · All Sections" : fields.audience.value === "__BRANCH__" ? profile.branch + " · All Years" : fields.audience.value) : classLabel,
         add_to_calendar: fields.calendar.checked && !!deadline,
         tags: currentParsed.tags || [],
         confidence: currentParsed.confidence || 0.9,
