@@ -80,6 +80,7 @@
   function render() {
     var q = state.query.trim().toLowerCase();
     var filtered = allAnnouncements.filter(function (a) {
+      if (!CB.util.audienceMatches(a.forClass, profile)) return false;
       var matchesCategory = state.category === "All" || a.category === state.category;
       var matchesQuery = !q || a.title.toLowerCase().indexOf(q) !== -1 || a.description.toLowerCase().indexOf(q) !== -1;
       return matchesCategory && matchesQuery;

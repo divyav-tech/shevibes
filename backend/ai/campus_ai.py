@@ -79,6 +79,30 @@ class CampusAI:
                     logger.error(f"Gemini JSON retry failed: {retry_error}")
             return None
 
+    def generate_json_with_image(self, prompt, image_bytes, mime_type="image/png", schema=None, model="gemini-3.6-flash"):
+        """Generate structured JSON from an image plus prompt (used for timetable OCR)."""
+        if not self.is_available():
+            return None
+        try:
+            from google.genai import types
+            config = types.GenerateContentConfig(response_mime_type="application/json")
+            if schema:
+                config.response_schema = schema
+            contents = [prompt, types.Part.from_bytes(data=image_bytes, mime_type=mime_type)]
+            response = self.client.models.generate_content(model=model, contents=contents, config=config)
+            if response and response.text:
+                cleaned = response.text.strip()
+                if cleaned.startswith("```json"):
+                    cleaned = cleaned[7:]
+                if cleaned.startswith("```"):
+                    cleaned = cleaned[3:]
+                if cleaned.endswith("```"):
+                    cleaned = cleaned[:-3]
+                return json.loads(cleaned.strip())
+        except Exception as e:
+            logger.error("Gemini image JSON error: %s", e)
+        return None
+
     def generate_text(self, prompt, model="gemini-3.6-flash"):
         """
         Generates text output using Gemini SDK.

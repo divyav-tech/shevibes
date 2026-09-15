@@ -17,6 +17,7 @@ from backend.routes.opportunities import opportunities_bp
 from backend.routes.calendar import calendar_bp
 from backend.routes.users import users_bp
 from backend.routes.auth import auth_bp
+from backend.routes.timetable import timetable_bp
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
 app.secret_key = os.getenv('SECRET_KEY', 'campus-board-secret-key-2026')
@@ -31,6 +32,7 @@ app.register_blueprint(opportunities_bp)
 app.register_blueprint(calendar_bp)
 app.register_blueprint(users_bp)
 app.register_blueprint(auth_bp)
+app.register_blueprint(timetable_bp)
 
 @app.after_request
 def add_dev_cache_headers(response):

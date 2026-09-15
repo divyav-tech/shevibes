@@ -61,3 +61,6 @@ frontend/    → Student-facing interface
 backend/     → Flask API, database and AI processing
 data/        → Sample announcement data
 docs/        → Product and API documentation
+
+### Timetable
+Class Representatives can upload a timetable image, use AI to extract class rows, edit the draft, and publish a community-scoped timetable. Students see only the published timetable matching their class/year/branch (or a campus-wide timetable).

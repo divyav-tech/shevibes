@@ -362,6 +362,56 @@
     return SAMPLE_EVENTS.concat(deriveEventsFromCrAnnouncements());
   }
 
+  /* ---------------- community targeting ---------------- */
+  // Shared announcements can target an exact class, a whole year/branch,
+  // an entire branch, or the whole campus. Personal task state never lives here.
+  function classLabelForProfile(profile) {
+    profile = profile || getProfile() || {};
+    return (profile.year || "") + " · " + (profile.branch || "") + " · Section " + (profile.section || "");
+  }
+
+  function audienceMatches(audience, profile) {
+    if (!audience) return true;
+    var a = String(audience).trim();
+    if (!a || a === "All Students" || a === "College-wide") return true;
+    profile = profile || getProfile() || {};
+    var year = profile.year || "";
+    var branch = profile.branch || "";
+    var section = profile.section || "";
+    var exact = classLabelForProfile(profile);
+    if (a === exact) return true;
+    if (a === year + " · " + branch + " · All Sections") return true;
+    if (a === branch + " · All Years") return true;
+    if (a === year + " · All Branches") return true;
+    return false;
+  }
+
+  /* ---------------- timetable demo data ---------------- */
+  var SAMPLE_TIMETABLE = {
+    id: "demo-timetable-a",
+    title: "1st Year · CSE · Section A",
+    audience: "1st Year · CSE · Section A",
+    status: "published",
+    updated_at: "2026-09-15",
+    entries: [
+      { day: "Monday", start: "09:00", end: "10:00", subject: "BEE", faculty: "Dr. Mehta", room: "Room 204" },
+      { day: "Monday", start: "10:00", end: "11:00", subject: "Mathematics", faculty: "Ms. Sharma", room: "Room 204" },
+      { day: "Monday", start: "11:30", end: "12:30", subject: "C Programming", faculty: "Mr. Verma", room: "Lab 2" },
+      { day: "Tuesday", start: "09:00", end: "10:00", subject: "Physics", faculty: "Dr. Rao", room: "Room 105" },
+      { day: "Tuesday", start: "10:00", end: "11:00", subject: "Communication Skills", faculty: "Ms. Kapoor", room: "Room 105" },
+      { day: "Tuesday", start: "11:30", end: "13:00", subject: "C Programming Lab", faculty: "Mr. Verma", room: "C Lab" },
+      { day: "Wednesday", start: "09:00", end: "10:00", subject: "Mathematics", faculty: "Ms. Sharma", room: "Room 204" },
+      { day: "Wednesday", start: "10:00", end: "11:00", subject: "Web Development", faculty: "Ms. Nair", room: "Lab 1" },
+      { day: "Wednesday", start: "11:30", end: "12:30", subject: "Physics", faculty: "Dr. Rao", room: "Room 105" },
+      { day: "Thursday", start: "09:00", end: "10:00", subject: "BEE", faculty: "Dr. Mehta", room: "Room 204" },
+      { day: "Thursday", start: "10:00", end: "11:00", subject: "Web Development", faculty: "Ms. Nair", room: "Lab 1" },
+      { day: "Thursday", start: "11:30", end: "12:30", subject: "Mathematics", faculty: "Ms. Sharma", room: "Room 204" },
+      { day: "Friday", start: "09:00", end: "10:00", subject: "Communication Skills", faculty: "Ms. Kapoor", room: "Room 105" },
+      { day: "Friday", start: "10:00", end: "11:00", subject: "C Programming", faculty: "Mr. Verma", room: "Room 204" },
+      { day: "Friday", start: "11:30", end: "12:30", subject: "Physics", faculty: "Dr. Rao", room: "Room 105" }
+    ]
+  };
+
   /* ---------------- category → paper tone ---------------- */
 
   var TONE_MAP = {
@@ -446,6 +496,7 @@
     SAMPLE_EVENTS.forEach(function (e) {
       index.push({ type: "Event", id: e.id, title: e.title, meta: formatDate(e.date), href: "calendar.html?q=" + encodeURIComponent(e.title) });
     });
+    index.push({ type: "Timetable", id: "timetable", title: "Class Timetable", meta: "Your weekly schedule", href: "timetable.html" });
     return index;
   }
 
@@ -718,6 +769,7 @@
         '<div><dt>' + (item.venueLabel || "Venue") + '</dt><dd class="' + (item.venue === "Not specified" || !item.venue ? "not-specified" : "") + '">' + (item.venue || "Not specified") + '</dd></div>' +
       '</dl>' +
       '<p style="margin-top:14px;font-size:0.85rem;color:var(--color-text-muted);">Source: <strong style="color:var(--color-text);">' + item.source + '</strong></p>' +
+      (item.forClass ? '<p style="margin-top:7px;font-size:0.78rem;color:var(--color-text-muted);">Visible to: <strong style="color:var(--color-text);">' + item.forClass + '</strong></p>' : '') +
       (item.aiGenerated ? '<p class="ai-trust-line">✦ AI understood this from the CR\'s original message — some details may be edited by hand.</p>' : '') +
       (item.original ? '<a href="#" class="trust-original" style="margin-top:14px;display:inline-block;">Original Announcement →</a>' : '') +
       '<div class="detail-actions" style="margin-top:22px;">' +
@@ -1099,6 +1151,30 @@
         .then(function(r) { return r.json(); })
         .catch(function() { return null; });
     },
+    getTimetable: function() {
+      return fetch(API_BASE + "/api/timetable", { credentials: "include" })
+        .then(function(r) { return r.json(); })
+        .catch(function() { return null; });
+    },
+    parseTimetable: function(file) {
+      var form = new FormData();
+      form.append("image", file);
+      return fetch(API_BASE + "/api/ai/parse-timetable", {
+        method: "POST",
+        credentials: "include",
+        body: form
+      }).then(function(r) { return r.json(); })
+        .catch(function() { return null; });
+    },
+    publishTimetable: function(timetable) {
+      return fetch(API_BASE + "/api/timetable", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(timetable)
+      }).then(function(r) { return r.json(); })
+        .catch(function() { return null; });
+    },
     getCalendarEvents: function() {
       return fetch(API_BASE + "/api/calendar/events", { credentials: "include" })
         .then(function(r) { return r.json(); })
@@ -1375,7 +1451,8 @@
       opportunities: SAMPLE_OPPORTUNITIES,
       events: SAMPLE_EVENTS,
       getAllAnnouncements: getAllAnnouncements,
-      getAllEvents: getAllEvents
+      getAllEvents: getAllEvents,
+      timetable: SAMPLE_TIMETABLE
     },
     util: {
       formatDate: formatDate,
@@ -1383,7 +1460,9 @@
       debounce: debounce,
       toast: toast,
       toneForCategory: toneForCategory,
-      avatarInitial: avatarInitial
+      avatarInitial: avatarInitial,
+      audienceMatches: audienceMatches,
+      classLabelForProfile: classLabelForProfile
     },
     initMobileNav: initMobileNav,
     initAppHeader: initAppHeader,
