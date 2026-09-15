@@ -1,0 +1,6 @@
+Flask
+Flask-CORS
+mysql-connector-python
+python-dotenv
+google-generativeai
+gunicorn
