@@ -29,6 +29,7 @@
       <a href="announcements.html">Announcements</a>
       <a href="opportunities.html">Opportunities</a>
       <a href="calendar.html" class="is-current">Calendar</a>
+      <a href="past-events.html">Past Events</a>
       <a href="profile.html">My Profile</a>
     </nav>
     <div class="app-header-actions">
@@ -105,6 +106,10 @@
       <button class="add-day-type-btn" type="button" data-note-type="Exam">Exam</button>
       <button class="add-day-type-btn" type="button" data-note-type="Event">Event</button>
       <button class="add-day-type-btn" type="button" data-note-type="Reminder">Reminder</button>
+    </div>
+    <div class="task-settings calendar-task-settings">
+      <label>Priority <select id="add-day-priority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></label>
+      <label>Reminder <select id="add-day-reminder"><option value="none" selected>No reminder</option><option value="1-day">1 day before</option><option value="2-days">2 days before</option><option value="1-week">1 week before</option></select></label>
     </div>
     <div class="cb-modal-footer" style="margin-top:14px;">
       <button class="btn btn-ghost" type="button" data-close-day-modal>Cancel</button>

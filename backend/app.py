@@ -32,6 +32,15 @@ app.register_blueprint(calendar_bp)
 app.register_blueprint(users_bp)
 app.register_blueprint(auth_bp)
 
+@app.after_request
+def add_dev_cache_headers(response):
+    # Prevent stale HTML/CSS/JS while developing locally.
+    if app.debug:
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
+
 @app.route('/')
 def serve_index():
     return send_from_directory(app.static_folder, 'index.html')

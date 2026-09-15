@@ -103,13 +103,17 @@
     }
     cards.forEach(function (item) {
       var card = document.createElement("div");
-      card.className = "info-card " + item._tone;
+      var task = item.deadline ? CB.storage.getTaskState("announcement", item.id) : null;
+      card.className = "info-card " + item._tone + (task && task.completed ? " is-completed" : "");
+      var priority = (task && task.priority) || item.priority;
       card.innerHTML =
         '<div class="info-card-head">' +
-          '<div><span class="info-card-tag">' + item.category + '</span><p class="info-card-title">' + item.title + '</p></div>' +
+          '<div><span class="info-card-tag">' + item.category + '</span>' + (priority ? '<span class="task-priority-badge priority-' + priority + '">' + priority + '</span>' : '') + '<p class="info-card-title">' + item.title + '</p></div>' +
+          '<div class="info-card-actions">' +
+          (item.deadline ? '<button class="task-complete-btn card-task-complete' + (task && task.completed ? " is-completed" : "") + '" data-complete="' + item.id + '" aria-label="' + (task && task.completed ? "Mark incomplete" : "Mark complete") + '" title="' + (task && task.completed ? "Mark incomplete" : "Mark complete") + '">' + (task && task.completed ? "✓" : "○") + '</button>' : '') +
           '<button class="info-card-save' + (CB.storage.isSaved("announcement", item.id) ? " is-saved" : "") + '" data-save="' + item.id + '" aria-label="Save">' +
             (CB.storage.isSaved("announcement", item.id) ? "★" : "☆") +
-          '</button>' +
+          '</button></div>' +
         '</div>' +
         '<p class="info-card-desc">' + item.description + '</p>' +
         '<div class="info-card-meta">' +
@@ -134,20 +138,37 @@
         CB.util.toast(nowSaved ? "Saved" : "Removed from saved");
       });
     });
+
+    container.querySelectorAll("[data-complete]").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.preventDefault(); e.stopPropagation();
+        var next = CB.storage.toggleTaskComplete("announcement", btn.dataset.complete);
+        btn.textContent = next.completed ? "✓" : "○";
+        btn.classList.toggle("is-completed", next.completed);
+        btn.setAttribute("aria-label", next.completed ? "Mark incomplete" : "Mark complete");
+        btn.closest(".info-card").classList.toggle("is-completed", next.completed);
+        CB.util.toast(next.completed ? "Marked complete ✓" : "Marked as incomplete");
+      });
+    });
   }
 
+  CB.storage.syncTaskReminders(allAnnouncements, "announcement");
   render();
+  document.addEventListener("cb:task-changed", render);
 
   CB.api.getNotices().then(function (res) {
     // Keep the polished demo/sample announcements when the database is empty.
     if (res && Array.isArray(res.notices) && res.notices.length) {
       allAnnouncements = res.notices.map(mapNotice);
+      CB.storage.syncTaskReminders(allAnnouncements, "announcement");
       render();
     } else {
+      CB.storage.syncTaskReminders(allAnnouncements, "announcement");
       render();
     }
   }).catch(function () {
     // API failure must never blank the page.
+    CB.storage.syncTaskReminders(allAnnouncements, "announcement");
     render();
   });
   });

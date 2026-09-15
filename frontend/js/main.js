@@ -23,7 +23,8 @@
     notifications: "campusboard.notifications",
     calendarNotes: "campusboard.calendarNotes",
     polaroids: "campusboard.polaroids",
-    customPolaroids: "campusboard.customPolaroids"
+    customPolaroids: "campusboard.customPolaroids",
+    taskStates: "campusboard.taskStates"
   };
 
   // Anchored "today" for this prototype — keeps deadlines, priorities and
@@ -91,6 +92,50 @@
   function savedCount() {
     var saved = getSaved();
     return (saved.announcement || []).length + (saved.opportunity || []).length + (saved.event || []).length;
+  }
+
+  /* ---------------- storage: task completion / priority / reminders ---------------- */
+  // Per-user local state for actionable items. Shape:
+  // { "announcement:a1": { completed:false, priority:"high", reminder:"1-day", completedAt:null } }
+  function taskStorageKey() {
+    var uid = localStorage.getItem("campusboard.activeUserId") || "guest";
+    return STORAGE_KEYS.taskStates + "." + uid;
+  }
+
+  function getTaskStates() {
+    try {
+      var raw = localStorage.getItem(taskStorageKey());
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function getTaskState(type, id) {
+    var all = getTaskStates();
+    return all[String(type) + ":" + String(id)] || { completed: false, priority: null, reminder: "none", completedAt: null };
+  }
+
+  function setTaskState(type, id, changes) {
+    var all = getTaskStates();
+    var key = String(type) + ":" + String(id);
+    var current = all[key] || { completed: false, priority: null, reminder: "none", completedAt: null };
+    all[key] = Object.assign({}, current, changes);
+    localStorage.setItem(taskStorageKey(), JSON.stringify(all));
+    document.dispatchEvent(new CustomEvent("cb:task-changed", { detail: { type: type, id: String(id), state: all[key] } }));
+    return all[key];
+  }
+
+  function toggleTaskComplete(type, id) {
+    var current = getTaskState(type, id);
+    return setTaskState(type, id, {
+      completed: !current.completed,
+      completedAt: !current.completed ? new Date().toISOString() : null
+    });
+  }
+
+  function taskIsActionable(item) {
+    return !!(item && item.deadline);
   }
 
   /* ---------------- storage: CR-posted announcements ---------------- */
@@ -213,6 +258,30 @@
 
   function unreadNotificationCount() {
     return getNotifications().filter(function (n) { return !n.read; }).length;
+  }
+
+  function syncTaskReminders(items, type) {
+    if (!Array.isArray(items)) return;
+    var today = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
+    var notifications = getNotifications();
+    var changed = false;
+    items.forEach(function (item) {
+      if (!item || !item.deadline) return;
+      var task = getTaskState(type, item.id);
+      if (!task.reminder || task.reminder === "none" || task.completed) return;
+      var offsets = { "1-day": 1, "2-days": 2, "1-week": 7 };
+      var offset = offsets[task.reminder];
+      if (!offset) return;
+      var deadline = new Date(String(item.deadline).slice(0, 10) + "T00:00:00");
+      var reminderDate = new Date(deadline.getTime() - offset * 86400000);
+      if (reminderDate.getTime() !== today.getTime()) return;
+      var nid = "task-reminder:" + type + ":" + item.id + ":" + task.reminder;
+      if (notifications.some(function (n) { return n.id === nid; })) return;
+      notifications.unshift({ id: nid, text: "Reminder — " + item.title + " is due " + (offset === 1 ? "tomorrow" : "soon") + ".", read: false });
+      changed = true;
+    });
+    if (changed) localStorage.setItem(STORAGE_KEYS.notifications, JSON.stringify(notifications));
+    return notifications;
   }
 
   /* ---------------- sample data ---------------- */
@@ -634,6 +703,12 @@
     var body = document.getElementById("cb-shared-detail-body");
     var savedType = item.savedType || "announcement";
     var isCurrentlySaved = isSaved(savedType, item.id);
+    var actionable = taskIsActionable(item);
+    var taskType = savedType || "announcement";
+    var task = actionable ? getTaskState(taskType, item.id) : null;
+    var priority = (task && task.priority) || item.priority || "medium";
+    var reminder = (task && task.reminder) || "none";
+
     body.innerHTML =
       '<span class="info-card-tag">' + item.category + '</span>' +
       '<h2 style="margin-top:10px;">' + item.title + '</h2>' +
@@ -643,11 +718,51 @@
         '<div><dt>' + (item.venueLabel || "Venue") + '</dt><dd class="' + (item.venue === "Not specified" || !item.venue ? "not-specified" : "") + '">' + (item.venue || "Not specified") + '</dd></div>' +
       '</dl>' +
       '<p style="margin-top:14px;font-size:0.85rem;color:var(--color-text-muted);">Source: <strong style="color:var(--color-text);">' + item.source + '</strong></p>' +
-      (item.aiGenerated ? '<p class="ai-trust-line">✦ AI understood this from the CR\u2019s original message — some details may be edited by hand.</p>' : '') +
+      (item.aiGenerated ? '<p class="ai-trust-line">✦ AI understood this from the CR\'s original message — some details may be edited by hand.</p>' : '') +
       (item.original ? '<a href="#" class="trust-original" style="margin-top:14px;display:inline-block;">Original Announcement →</a>' : '') +
-      '<div style="margin-top:22px;"><button class="btn btn-ghost" type="button" id="cb-shared-save-btn">' +
-        (isCurrentlySaved ? "★ Saved — click to remove" : "☆ Save this") +
-      '</button></div>';
+      '<div class="detail-actions" style="margin-top:22px;">' +
+        '<button class="btn btn-ghost" type="button" id="cb-shared-save-btn">' +
+          (isCurrentlySaved ? "★ Saved — click to remove" : "☆ Save this") +
+        '</button>' +
+        (actionable ?
+          '<button class="task-complete-btn' + (task.completed ? ' is-completed' : '') + '" type="button" id="cb-detail-complete-btn" aria-pressed="' + (task.completed ? 'true' : 'false') + '">' +
+            (task.completed ? '✓ Completed' : '○ Mark complete') +
+          '</button>' :
+          '') +
+      '</div>';
+
+    if (actionable) {
+      var settings = document.createElement("div");
+      settings.className = "task-settings";
+      settings.innerHTML =
+        '<label>Priority <select id="cb-detail-priority">' +
+          '<option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>' +
+        '</select></label>' +
+        '<label>Reminder <select id="cb-detail-reminder">' +
+          '<option value="none">No reminder</option><option value="1-day">1 day before</option><option value="2-days">2 days before</option><option value="1-week">1 week before</option>' +
+        '</select></label>';
+      body.appendChild(settings);
+      document.getElementById("cb-detail-priority").value = priority;
+      document.getElementById("cb-detail-reminder").value = reminder;
+
+      document.getElementById("cb-detail-priority").addEventListener("change", function () {
+        setTaskState(taskType, item.id, { priority: this.value });
+        toast("Priority updated");
+      });
+      document.getElementById("cb-detail-reminder").addEventListener("change", function () {
+        setTaskState(taskType, item.id, { reminder: this.value });
+        toast(this.value === "none" ? "Reminder removed" : "Reminder saved ✦");
+      });
+
+      document.getElementById("cb-detail-complete-btn").addEventListener("click", function () {
+        var next = toggleTaskComplete(taskType, item.id);
+        this.classList.toggle("is-completed", next.completed);
+        this.setAttribute("aria-pressed", next.completed ? "true" : "false");
+        this.textContent = next.completed ? "✓ Completed" : "○ Mark complete";
+        toast(next.completed ? "Marked complete ✓" : "Marked as incomplete");
+        document.dispatchEvent(new CustomEvent("cb:task-changed"));
+      });
+    }
 
     var saveBtn = document.getElementById("cb-shared-save-btn");
     saveBtn.addEventListener("click", function () {
@@ -673,15 +788,23 @@
       var card = document.createElement("div");
       var tone = toneClass || toneForCategory(item.category);
       card.className = "info-card " + tone;
+      var task = taskIsActionable(item) ? getTaskState(type, item.id) : null;
+      if (task && task.completed) card.classList.add("is-completed");
+      var priorityBadge = taskIsActionable(item) && ((task && task.priority) || item.priority)
+        ? '<span class="task-priority-badge priority-' + ((task && task.priority) || item.priority) + '">' + ((task && task.priority) || item.priority) + '</span>' : '';
+      var completeButton = taskIsActionable(item)
+        ? '<button class="task-complete-btn card-task-complete' + (task && task.completed ? ' is-completed' : '') + '" data-complete="' + type + ':' + item.id + '" aria-label="' + (task && task.completed ? 'Mark incomplete' : 'Mark complete') + '" title="' + (task && task.completed ? 'Mark incomplete' : 'Mark complete') + '">' + (task && task.completed ? '✓' : '○') + '</button>'
+        : '';
       card.innerHTML =
         '<div class="info-card-head">' +
           '<div>' +
-            '<span class="info-card-tag">' + item.category + '</span>' +
+            '<span class="info-card-tag">' + item.category + '</span>' + priorityBadge +
             '<p class="info-card-title">' + item.title + '</p>' +
           '</div>' +
+          '<div class="info-card-actions">' + completeButton +
           '<button class="info-card-save' + (isSaved(type, item.id) ? " is-saved" : "") + '" data-save="' + type + ':' + item.id + '" aria-label="Save">' +
             (isSaved(type, item.id) ? "★" : "☆") +
-          '</button>' +
+          '</button></div>' +
         '</div>' +
         '<p class="info-card-desc">' + item.description + '</p>' +
         '<div class="info-card-meta">' +
@@ -708,6 +831,21 @@
         btn.classList.toggle("is-saved", nowSaved);
         toast(nowSaved ? "Saved" : "Removed from saved");
         document.dispatchEvent(new CustomEvent("cb:saved-changed"));
+      });
+    });
+
+    container.querySelectorAll("[data-complete]").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var parts = btn.dataset.complete.split(":");
+        var next = toggleTaskComplete(parts[0], parts[1]);
+        btn.textContent = next.completed ? "✓" : "○";
+        btn.classList.toggle("is-completed", next.completed);
+        btn.setAttribute("aria-label", next.completed ? "Mark incomplete" : "Mark complete");
+        var card = btn.closest(".info-card");
+        if (card) card.classList.toggle("is-completed", next.completed);
+        toast(next.completed ? "Marked complete ✓" : "Marked as incomplete");
       });
     });
   }
@@ -1212,12 +1350,18 @@
       isSaved: isSaved,
       toggleSaved: toggleSaved,
       savedCount: savedCount,
+      getTaskStates: getTaskStates,
+      getTaskState: getTaskState,
+      setTaskState: setTaskState,
+      toggleTaskComplete: toggleTaskComplete,
+      taskIsActionable: taskIsActionable,
       getCrAnnouncements: getCrAnnouncements,
       addCrAnnouncement: addCrAnnouncement,
       getNotifications: getNotifications,
       markNotificationRead: markNotificationRead,
       markAllNotificationsRead: markAllNotificationsRead,
       unreadNotificationCount: unreadNotificationCount,
+      syncTaskReminders: syncTaskReminders,
       getCalendarNotes: getCalendarNotes,
       addCalendarNote: addCalendarNote,
       updateCalendarNote: updateCalendarNote,

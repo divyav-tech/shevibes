@@ -40,7 +40,8 @@
       venue: e.venue || e.forClass || "Not specified",
       venueLabel: e.venue ? "Venue" : "For",
       aiGenerated: !!e.aiGenerated,
-      savedType: "event"
+      savedType: "event",
+      priority: e.priority || "medium"
     };
   }
 
@@ -146,8 +147,9 @@
 
       (byDate[iso] || []).slice(0, 4).forEach(function (entry) {
         var pill = document.createElement("span");
-        pill.className = "cal-note cal-note-pill " + toneClassFor(entry.kind, entry.data);
-        pill.textContent = entry.kind === "event" ? entry.data.title : "📌 " + entry.data.text;
+        var eventTask = entry.kind === "event" ? CB.storage.getTaskState("event", entry.data.id) : null;
+        pill.className = "cal-note cal-note-pill " + toneClassFor(entry.kind, entry.data) + (eventTask && eventTask.completed ? " is-task-completed" : "");
+        pill.textContent = entry.kind === "event" ? ((eventTask && eventTask.completed) ? "✓ " : "") + entry.data.title : "📌 " + entry.data.text;
         pill.addEventListener("click", function (ev) {
           ev.stopPropagation();
           CB.ui.openDetailModal(entry.kind === "event" ? toDetailItem(entry.data) : noteToDetailItem(entry.data));
@@ -248,14 +250,30 @@
     upcoming.forEach(function (e) {
       var meta = typeMeta[e.type] || { label: "Event" };
       var card = document.createElement("div");
-      card.className = "info-card " + toneClassFor("event", e);
+      var task = CB.storage.getTaskState("event", e.id);
+      card.className = "info-card " + toneClassFor("event", e) + (task.completed ? " is-completed" : "");
       card.innerHTML =
         '<div class="info-card-head">' +
           '<div><span class="info-card-tag">' + meta.label + '</span><p class="info-card-title">' + e.title + '</p></div>' +
+          '<div class="info-card-actions">' +
+            '<button class="task-complete-btn card-task-complete' + (task.completed ? ' is-completed' : '') + '" data-complete-event="' + e.id + '" aria-label="' + (task.completed ? 'Mark incomplete' : 'Mark complete') + '" title="' + (task.completed ? 'Mark incomplete' : 'Mark complete') + '">' + (task.completed ? '✓' : '○') + '</button>' +
+          '</div>' +
         '</div>' +
         '<div class="info-card-meta"><span>' + CB.util.formatDate(e.date) + (e.time ? " · " + e.time : "") + '</span><span>' + (e.venue || e.forClass) + '</span></div>' +
         (e.aiGenerated ? '<span class="ai-badge">AI sorted this</span>' : '');
-      card.addEventListener("click", function () { CB.ui.openDetailModal(toDetailItem(e)); });
+      card.addEventListener("click", function (ev) {
+        if (ev.target.closest("[data-complete-event]")) return;
+        CB.ui.openDetailModal(toDetailItem(e));
+      });
+      var completeBtn = card.querySelector("[data-complete-event]");
+      completeBtn.addEventListener("click", function (ev) {
+        ev.preventDefault(); ev.stopPropagation();
+        var next = CB.storage.toggleTaskComplete("event", e.id);
+        completeBtn.textContent = next.completed ? "✓" : "○";
+        completeBtn.classList.toggle("is-completed", next.completed);
+        card.classList.toggle("is-completed", next.completed);
+        CB.util.toast(next.completed ? "Marked complete ✓" : "Marked as incomplete");
+      });
       list.appendChild(card);
     });
   }
@@ -293,6 +311,8 @@
     document.getElementById("add-day-date-label").textContent = MONTH_NAMES[d.getMonth()] + " " + d.getDate();
     document.getElementById("add-day-text").value = "";
     selectedNoteType = "Deadline";
+    document.getElementById("add-day-priority").value = "medium";
+    document.getElementById("add-day-reminder").value = "none";
     document.querySelectorAll(".add-day-type-btn").forEach(function (btn) {
       btn.classList.toggle("is-active", btn.dataset.noteType === selectedNoteType);
     });
@@ -335,7 +355,13 @@
   document.getElementById("add-day-save").addEventListener("click", function () {
     var text = document.getElementById("add-day-text").value.trim();
     if (!text) { CB.util.toast("Write something first"); return; }
-    CB.storage.addCalendarNote({ date: dayModalDate, text: text, type: selectedNoteType });
+    CB.storage.addCalendarNote({
+      date: dayModalDate,
+      text: text,
+      type: selectedNoteType,
+      priority: document.getElementById("add-day-priority").value,
+      reminder: document.getElementById("add-day-reminder").value
+    });
     CB.util.toast("Pinned for later ✦");
     closeAddDayModal();
     renderMonth();
@@ -352,10 +378,12 @@
       // Keep demo deadlines/events visible when DB has no seeded calendar rows.
       campusEvents = (CB.data.events || []).map(mapCalendarEvent);
     }
+    CB.storage.syncTaskReminders(campusEvents, "event");
     renderMonth();
   }).catch(function (err) {
     console.warn("Calendar events API unavailable; using local campus events", err);
     campusEvents = (CB.data.events || []).map(mapCalendarEvent);
+    CB.storage.syncTaskReminders(campusEvents, "event");
     renderMonth();
   });
 })();

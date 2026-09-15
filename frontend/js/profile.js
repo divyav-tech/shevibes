@@ -135,11 +135,13 @@
       var confirmed = window.confirm("This logs you out and clears saved data on this device. Continue?");
       if (!confirmed) return;
       function finishLogout() {
+        var taskUid = localStorage.getItem("campusboard.activeUserId") || "guest";
         CB.storage.clearProfile();
         localStorage.removeItem("campusboard.saved");
         localStorage.removeItem("campusboard.crAnnouncements");
         localStorage.removeItem("campusboard.calendarNotes");
         localStorage.removeItem("campusboard.polaroids");
+        localStorage.removeItem("campusboard.taskStates." + taskUid);
         window.location.href = "index.html";
       }
       if (CB.api && CB.api.logout) {

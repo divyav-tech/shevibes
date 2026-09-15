@@ -141,3 +141,32 @@
 @media (max-width: 860px) {
   .profile-grid { grid-template-columns: 1fr; }
 }
+
+
+/* Past Events archive */
+.past-events-note { margin:4px 0 22px; font-size:.78rem; color:var(--color-text-muted); }
+.past-events-filter { margin-bottom:4px; }
+.past-event-card { position:relative; background:var(--color-cream); border:1px solid rgba(87,85,39,.12); border-radius:10px; padding:20px; box-shadow:var(--shadow-paper-soft); transform:rotate(var(--rot,0deg)); transition:transform .2s ease, box-shadow .2s ease; }
+.past-event-card:hover { transform:rotate(0deg) translateY(-4px); box-shadow:var(--shadow-paper); }
+.past-event-card.completed { background:#f1f0df; }
+.past-event-card.missed { background:#f4e5e2; }
+.past-event-top { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.past-status { font-size:.62rem; font-weight:800; letter-spacing:.06em; }
+.past-status.missed { color:#a23f39; }
+.past-status.completed { color:#4e6f35; }
+.past-event-title { margin-top:13px; font-family:var(--font-display); font-size:1.18rem; }
+.past-event-card.is-completed .past-event-title,
+.past-event-card.is-completed .past-event-desc,
+.past-event-card.is-completed .past-event-meta { text-decoration:line-through; text-decoration-thickness:1.5px; opacity:.68; }
+.past-event-desc { margin-top:7px; font-size:.84rem; color:var(--color-text-muted); line-height:1.45; }
+.past-event-meta { display:flex; flex-wrap:wrap; gap:8px 15px; margin-top:13px; font-size:.73rem; color:var(--color-text-muted); }
+.past-event-meta strong { color:var(--color-text); }
+.past-event-actions { display:flex; align-items:center; gap:8px; margin-top:18px; }
+.past-details { padding:7px 11px; font-size:.75rem; }
+.missed-note, .completed-note { margin-top:12px; font-size:.72rem; font-family:var(--font-hand); }
+.missed-note { color:#a23f39; }
+.completed-note { color:#4e6f35; }
+.past-events-empty { grid-column:1/-1; text-align:center; padding:54px 20px; background:var(--color-cream); border:2px dashed rgba(126,116,91,.24); border-radius:12px; }
+.past-empty-mark { font-size:1.8rem; color:var(--color-accent); }
+.past-events-empty h3 { margin-top:9px; font-family:var(--font-display); font-size:1.15rem; }
+.past-events-empty p { margin-top:5px; color:var(--color-text-muted); font-size:.82rem; }
