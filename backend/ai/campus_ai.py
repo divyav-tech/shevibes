@@ -30,7 +30,7 @@ class CampusAI:
     def is_available(self):
         return self.client is not None
 
-    def generate_json(self, prompt, schema=None, model="gemini-2.5-flash"):
+    def generate_json(self, prompt, schema=None, model="gemini-3.6-flash"):
         """
         Generates structured JSON using Gemini SDK.
         Returns parsed dict/list or None if error/unavailable.
@@ -68,7 +68,7 @@ class CampusAI:
             logger.error(f"Gemini API error in generate_json: {e}")
             return None
 
-    def generate_text(self, prompt, model="gemini-2.5-flash"):
+    def generate_text(self, prompt, model="gemini-3.6-flash"):
         """
         Generates text output using Gemini SDK.
         """

@@ -9,7 +9,7 @@
   CB.ui.initPolaroid();
 
   var profile = CB.storage.getProfile();
-  var allOpportunities = CB.data.opportunities;
+  var allOpportunities = [];
 
   var state = { query: "", category: "All" };
   var params = new URLSearchParams(window.location.search);
@@ -31,6 +31,34 @@
     state.query = pageSearch.value;
     render();
   }, 150));
+
+  function mapOpportunityCategory(category) {
+    var key = String(category || "").toLowerCase();
+    if (key === "tech" || key === "hackathon" || key === "internship") return "Tech";
+    if (key === "workshop" || key === "webinar") return "Workshops";
+    if (key === "competition") return "Competitions";
+    if (key === "scholarship") return "Scholarships";
+    if (key === "volunteering") return "Volunteering";
+    if (key === "events") return "Events";
+    if (key === "societies") return "Societies";
+    if (!category) return "General";
+    var s = String(category);
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  function mapOpportunity(row) {
+    var category = mapOpportunityCategory(row.category);
+    return {
+      id: String(row.id),
+      title: row.title,
+      org: row.org || "Campus",
+      category: category,
+      deadline: row.deadline ? String(row.deadline).slice(0, 10) : null,
+      eligibility: row.eligibility || "Not specified",
+      description: row.description || "",
+      tags: Array.isArray(row.tags) ? row.tags : [category]
+    };
+  }
 
   function toCard(o) {
     return {
@@ -98,9 +126,17 @@
 
     var recommended = filtered.filter(function (o) { return CB.util.matchesInterests(o.category, profile.interests); });
 
-    renderGrid("recommended-grid", recommended, "Pick a few more interests in your profile to see recommendations here.");
-    renderGrid("opportunities-grid", filtered, "No results found" + (q ? ' for “' + state.query + '”' : "") + ".");
+    var emptyAll = "No opportunities available right now.";
+    renderGrid("recommended-grid", recommended, allOpportunities.length ? "Pick a few more interests in your profile to see recommendations here." : emptyAll);
+    renderGrid("opportunities-grid", filtered, allOpportunities.length ? ("No results found" + (q ? ' for “' + state.query + '”' : "") + ".") : emptyAll);
   }
 
-  render();
+  CB.api.getOpportunities().then(function (res) {
+    if (res && Array.isArray(res.opportunities)) {
+      allOpportunities = res.opportunities.map(mapOpportunity);
+    } else {
+      allOpportunities = [];
+    }
+    render();
+  });
 })();

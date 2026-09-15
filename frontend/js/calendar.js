@@ -67,10 +67,38 @@
   function isoOf(y, m, d) { return y + "-" + pad2(m + 1) + "-" + pad2(d); }
   function todayIso() { return isoOf(todayParts.getFullYear(), todayParts.getMonth(), todayParts.getDate()); }
 
+  var campusEvents = [];
+
+  function mapCalendarCategory(category) {
+    var key = String(category || "").toLowerCase();
+    if (key === "deadline") return "deadline";
+    if (key === "academic") return "exam";
+    if (key === "opportunity") return "competition";
+    if (key === "event" || key === "personal") return "event";
+    return "event";
+  }
+
+  function mapCalendarEvent(row) {
+    return {
+      id: String(row.id),
+      title: row.title,
+      date: row.event_date ? String(row.event_date).slice(0, 10) : "",
+      time: row.event_time || null,
+      venue: row.location || null,
+      type: mapCalendarCategory(row.category),
+      forClass: "All Students",
+      aiGenerated: Boolean(row.announcement_id)
+    };
+  }
+
+  function getCampusEvents() {
+    return campusEvents.filter(relevantToClass);
+  }
+
   /* ---------------- month grid ---------------- */
 
   function eventsAndNotesByDate() {
-    var events = CB.data.getAllEvents().filter(relevantToClass);
+    var events = getCampusEvents();
     var notes = CB.storage.getCalendarNotes();
     var byDate = {};
     events.forEach(function (e) {
@@ -210,7 +238,7 @@
   function renderUpcoming() {
     var list = document.getElementById("upcoming-list");
     list.innerHTML = "";
-    var upcoming = CB.data.getAllEvents().filter(relevantToClass).slice().sort(function (a, b) { return a.date.localeCompare(b.date); });
+    var upcoming = getCampusEvents().slice().sort(function (a, b) { return a.date.localeCompare(b.date); });
 
     if (!upcoming.length) {
       list.innerHTML = '<p class="search-empty">Nothing scheduled right now.</p>';
@@ -313,5 +341,21 @@
     renderMonth();
   });
 
-  renderMonth();
+  var request = CB.api && CB.api.getCalendarEvents
+    ? CB.api.getCalendarEvents()
+    : Promise.resolve(null);
+
+  Promise.resolve(request).then(function (res) {
+    if (res && Array.isArray(res.events)) {
+      campusEvents = res.events.map(mapCalendarEvent);
+    } else {
+      console.error("Calendar events API failed or returned invalid data", res);
+      campusEvents = [];
+    }
+    renderMonth();
+  }).catch(function (err) {
+    console.error("Calendar events API failed", err);
+    campusEvents = [];
+    renderMonth();
+  });
 })();

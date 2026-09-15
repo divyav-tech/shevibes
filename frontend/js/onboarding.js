@@ -157,11 +157,23 @@
         year: classInfo.year,
         branch: classInfo.branch,
         section: classInfo.section,
+        college: "Indira Gandhi Delhi Technical University for Women",
         interests: Array.from(interests)
       };
       CB.storage.saveProfile(profile);
       closeBoard();
-      window.location.href = "dashboard.html";
+      function goToDashboard() {
+        window.location.href = "dashboard.html";
+      }
+      try {
+        if (CB.api && CB.api.postProfile) {
+          CB.api.postProfile(profile).then(goToDashboard, goToDashboard);
+        } else {
+          goToDashboard();
+        }
+      } catch (e) {
+        goToDashboard();
+      }
     });
   }
 

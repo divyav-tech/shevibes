@@ -48,8 +48,38 @@
 
   var priorityWeight = { high: 0, medium: 1, low: 2 };
 
+  function titleCaseCategory(category) {
+    if (!category) return "General";
+    var s = String(category);
+    return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  }
+
+  function firstTenChars(value) {
+    if (value == null || value === "") return null;
+    return String(value).slice(0, 10);
+  }
+
+  function mapNotice(row) {
+    return {
+      id: String(row.id),
+      title: row.title,
+      description: row.description || row.summary || row.content || "",
+      forClass: row.forClass || row.class_name || "All Students",
+      date: firstTenChars(row.created_at || row.date) || "",
+      deadline: firstTenChars(row.deadline),
+      category: titleCaseCategory(row.category),
+      priority: row.priority,
+      source: row.source,
+      tags: row.tags || [],
+      venue: row.venue || "Not specified",
+      aiGenerated: Boolean(row.aiGenerated || row.ai_generated),
+      subject: row.subject,
+      action: row.action,
+      time: row.time
+    };
+  }
+
   function render() {
-    allAnnouncements = CB.data.getAllAnnouncements();
     var q = state.query.trim().toLowerCase();
     var filtered = allAnnouncements.filter(function (a) {
       var matchesCategory = state.category === "All" || a.category === state.category;
@@ -109,4 +139,17 @@
   }
 
   render();
+
+  CB.api.getNotices().then(function (res) {
+    if (
+      res &&
+      res.success === true &&
+      res.source === "database" &&
+      res.notices &&
+      res.notices.length
+    ) {
+      allAnnouncements = res.notices.map(mapNotice);
+      render();
+    }
+  });
 })();
