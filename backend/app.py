@@ -16,9 +16,13 @@ from backend.routes.notices import notices_bp
 from backend.routes.opportunities import opportunities_bp
 from backend.routes.calendar import calendar_bp
 from backend.routes.users import users_bp
+from backend.routes.auth import auth_bp
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
-CORS(app)
+app.secret_key = os.getenv('SECRET_KEY', 'campus-board-secret-key-2026')
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+CORS(app, supports_credentials=True)
 
 # Register API blueprints
 app.register_blueprint(ai_bp)
@@ -26,6 +30,7 @@ app.register_blueprint(notices_bp)
 app.register_blueprint(opportunities_bp)
 app.register_blueprint(calendar_bp)
 app.register_blueprint(users_bp)
+app.register_blueprint(auth_bp)
 
 @app.route('/')
 def serve_index():

@@ -4,6 +4,8 @@ USE campus_board;
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
+    college_email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
     college VARCHAR(200),
     year VARCHAR(10),
     branch VARCHAR(50),

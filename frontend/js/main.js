@@ -493,13 +493,90 @@
   }
 
   function guardAuthenticatedPage() {
-    // Every app page (dashboard, announcements, etc.) needs a profile.
-    // If someone opens one directly without onboarding, send them back.
+    // Verify server authentication status via /api/auth/me
+    if (api && api.me) {
+      api.me().then(function (res) {
+        if (!res || !res.authenticated || !res.user) {
+          clearProfile();
+          window.location.href = "index.html";
+        } else {
+          saveProfile(res.user);
+          initAvatar();
+        }
+      });
+    }
+
     if (!hasProfile()) {
       window.location.href = "index.html";
       return false;
     }
     return true;
+  }
+
+  function initSignInModal() {
+    var modal = document.getElementById("signin-modal");
+    if (!modal) return;
+
+    var openBtns = document.querySelectorAll(".js-open-signin");
+    var closeBtns = document.querySelectorAll("[data-close-signin]");
+    var form = document.getElementById("signin-form");
+    var emailInput = document.getElementById("signin-email");
+    var passwordInput = document.getElementById("signin-password");
+    var errorMsgEl = document.getElementById("signin-error");
+
+    function openModal(e) {
+      if (e) e.preventDefault();
+      modal.classList.add("is-open");
+      modal.setAttribute("aria-hidden", "false");
+      document.body.classList.add("modal-open");
+      if (emailInput) emailInput.focus();
+    }
+
+    function closeModal() {
+      modal.classList.remove("is-open");
+      modal.setAttribute("aria-hidden", "true");
+      document.body.classList.remove("modal-open");
+      if (errorMsgEl) errorMsgEl.style.display = "none";
+    }
+
+    openBtns.forEach(function (btn) { btn.addEventListener("click", openModal); });
+    closeBtns.forEach(function (btn) { btn.addEventListener("click", closeModal); });
+
+    if (form) {
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var email = emailInput ? emailInput.value.trim() : "";
+        var password = passwordInput ? passwordInput.value.trim() : "";
+
+        if (!email || !password) {
+          if (errorMsgEl) {
+            errorMsgEl.textContent = "Please fill in all fields.";
+            errorMsgEl.style.display = "block";
+          }
+          return;
+        }
+
+        api.login({ college_email: email, password: password })
+          .then(function (res) {
+            if (res && res.user) {
+              saveProfile(res.user);
+              closeModal();
+              window.location.href = "dashboard.html";
+            } else {
+              if (errorMsgEl) {
+                errorMsgEl.textContent = (res && res.error) || "Incorrect college email or password.";
+                errorMsgEl.style.display = "block";
+              }
+            }
+          })
+          .catch(function () {
+            if (errorMsgEl) {
+              errorMsgEl.textContent = "Incorrect college email or password.";
+              errorMsgEl.style.display = "block";
+            }
+          });
+      });
+    }
   }
 
   function initAppHeader() {
@@ -807,8 +884,39 @@
   var API_BASE = "";
 
   var api = {
+    register: function(data) {
+      return fetch(API_BASE + "/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(data)
+      }).then(function(r) { return r.json(); });
+    },
+    login: function(credentials) {
+      return fetch(API_BASE + "/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(credentials)
+      }).then(function(r) { return r.json(); });
+    },
+    logout: function() {
+      return fetch(API_BASE + "/api/auth/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin"
+      }).then(function(r) { return r.json(); });
+    },
+    me: function() {
+      return fetch(API_BASE + "/api/auth/me", {
+        credentials: "same-origin"
+      }).then(function(r) {
+        if (!r.ok) return { authenticated: false };
+        return r.json();
+      }).catch(function() { return { authenticated: false }; });
+    },
     getNotices: function() {
-      return fetch(API_BASE + "/api/notices")
+      return fetch(API_BASE + "/api/notices", { credentials: "same-origin" })
         .then(function(r) { return r.json(); })
         .catch(function() { return null; });
     },
@@ -816,18 +924,19 @@
       return fetch(API_BASE + "/api/notices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify(notice)
       })
       .then(function(r) { return r.json(); })
       .catch(function() { return null; });
     },
     getOpportunities: function() {
-      return fetch(API_BASE + "/api/opportunities")
+      return fetch(API_BASE + "/api/opportunities", { credentials: "same-origin" })
         .then(function(r) { return r.json(); })
         .catch(function() { return null; });
     },
     getCalendarEvents: function() {
-      return fetch(API_BASE + "/api/calendar/events")
+      return fetch(API_BASE + "/api/calendar/events", { credentials: "same-origin" })
         .then(function(r) { return r.json(); })
         .catch(function() { return null; });
     },
@@ -835,13 +944,14 @@
       return fetch(API_BASE + "/api/calendar/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify(evt)
       })
       .then(function(r) { return r.json(); })
       .catch(function() { return null; });
     },
     getProfile: function() {
-      return fetch(API_BASE + "/api/users/profile")
+      return fetch(API_BASE + "/api/users/profile", { credentials: "same-origin" })
         .then(function(r) { return r.json(); })
         .catch(function() { return null; });
     },
@@ -849,6 +959,7 @@
       return fetch(API_BASE + "/api/users/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify(profile)
       })
       .then(function(r) { return r.json(); })
@@ -1068,5 +1179,6 @@
   document.addEventListener("DOMContentLoaded", function() {
     initMobileNav();
     initAskCampusBoard();
+    initSignInModal();
   });
 })(window);

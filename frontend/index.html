@@ -35,7 +35,8 @@
     </nav>
 
     <div class="header-actions">
-      <a class="btn btn-primary btn-small js-build-board" href="#build-board">Build My Board</a>
+      <a class="btn btn-ghost btn-small js-open-signin" href="#signin" style="margin-right: 8px;">Sign In</a>
+      <a class="btn btn-primary btn-small js-build-board" href="#build-board">Create New Board</a>
       <button class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="main-nav" aria-label="Open menu">
         <span></span><span></span><span></span>
       </button>
@@ -53,8 +54,7 @@
         <h1 class="hero-heading">Your campus.<br><span class="hero-heading-accent">Sorted.</span></h1>
         <p class="hero-sub">All the announcements, opportunities and deadlines that matter to you — in one place.</p>
         <div class="hero-ctas">
-          <a href="#build-board" class="btn btn-primary js-build-board">Build My Board →</a>
-          <a href="#" class="btn btn-ghost">Explore Campus</a>
+          <a href="#build-board" class="btn btn-primary js-build-board">Create New Board →</a>
         </div>
         <div class="statement-note" style="--rot:-1deg;">
           <span class="tape tape-center"></span>
@@ -271,12 +271,12 @@
         <h2>Ready to make campus make sense?</h2>
         <p class="final-cta-sub">Build a board that knows what matters to you.</p>
       </div>
-      <a href="#build-board" class="btn btn-primary btn-large js-build-board">Build My Board →</a>
+      <a href="#build-board" class="btn btn-primary btn-large js-build-board">Create New Board →</a>
       <span class="scribble scribble-final">let&rsquo;s pin down<br>what matters</span>
     </div>
   </section>
 
-  <!-- ============ BUILD MY BOARD ONBOARDING ============ -->
+  <!-- ============ CREATE NEW BOARD ONBOARDING ============ -->
   <div class="board-modal" id="build-board" aria-hidden="true">
     <div class="board-modal-backdrop" data-close-board></div>
 
@@ -296,16 +296,28 @@
         <span class="progress-dot"></span>
       </div>
 
-      <!-- Step 1 — Name -->
+      <!-- Step 1 — Credentials & Name -->
       <div class="onboarding-step is-active" data-step="1">
         <span class="onboarding-kicker">nice to meet you ✦</span>
-        <h2 id="onboarding-title">What should we call you?</h2>
-        <p class="onboarding-intro">Your name shows up on your board and your little campus corner.</p>
+        <h2 id="onboarding-title">Create your account</h2>
+        <p class="onboarding-intro">Enter your details to create a new account and board.</p>
 
         <div class="class-field">
-          <label for="field-name">Your name</label>
-          <input type="text" id="field-name" placeholder="e.g. Divya" autocomplete="given-name">
+          <label for="field-name">Full name</label>
+          <input type="text" id="field-name" placeholder="e.g. Divya Sharma" autocomplete="name">
         </div>
+
+        <div class="class-field" style="margin-top: 12px;">
+          <label for="field-email">College Email ID</label>
+          <input type="email" id="field-email" placeholder="e.g. divya@college.edu" autocomplete="email">
+        </div>
+
+        <div class="class-field" style="margin-top: 12px;">
+          <label for="field-password">Password</label>
+          <input type="password" id="field-password" placeholder="••••••••" autocomplete="new-password">
+        </div>
+
+        <p id="onboarding-error" class="onboarding-error-msg" style="color: #b97d7b; font-weight: 500; font-size: 0.88rem; margin-top: 10px; display: none;"></p>
 
         <div class="onboarding-footer">
           <span class="step-note">01 / 05</span>
@@ -407,7 +419,7 @@
         <div class="onboarding-footer">
           <button class="onboarding-back btn btn-ghost" type="button" data-back>← Back</button>
           <span class="step-note">04 / 05</span>
-          <button class="onboarding-next btn btn-primary" type="button" data-next disabled>Build my board →</button>
+          <button class="onboarding-next btn btn-primary" type="button" data-next disabled>Create New Board →</button>
         </div>
       </div>
 
@@ -470,6 +482,38 @@
           <button class="onboarding-back btn btn-ghost" type="button" data-back>← Edit</button>
           <button class="btn btn-primary" type="button" data-finish>Enter my board →</button>
         </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ SIGN IN MODAL ============ -->
+  <div class="board-modal" id="signin-modal" aria-hidden="true">
+    <div class="board-modal-backdrop" data-close-signin></div>
+
+    <section class="board-onboarding" role="dialog" aria-modal="true" aria-labelledby="signin-title" style="max-width: 440px;">
+      <button class="board-modal-close" type="button" aria-label="Close" data-close-signin>×</button>
+
+      <div class="onboarding-step is-active" style="padding-top: 10px;">
+        <span class="onboarding-kicker">welcome back ✦</span>
+        <h2 id="signin-title">Sign In to Campus Board</h2>
+        <p class="onboarding-intro">Enter your college email and password to access your board.</p>
+
+        <form id="signin-form" style="margin-top: 16px;">
+          <div class="class-field">
+            <label for="signin-email">College Email ID</label>
+            <input type="email" id="signin-email" placeholder="e.g. student@college.edu" required autocomplete="username">
+          </div>
+          <div class="class-field" style="margin-top: 12px;">
+            <label for="signin-password">Password</label>
+            <input type="password" id="signin-password" placeholder="••••••••" required autocomplete="current-password">
+          </div>
+          <p id="signin-error" class="onboarding-error-msg" style="color: #b97d7b; font-weight: 500; font-size: 0.88rem; margin-top: 12px; display: none;"></p>
+
+          <div class="onboarding-footer" style="margin-top: 24px; justify-content: space-between;">
+            <button class="btn btn-ghost" type="button" data-close-signin>Cancel</button>
+            <button class="btn btn-primary" type="submit" id="signin-submit-btn">Sign In →</button>
+          </div>
+        </form>
       </div>
     </section>
   </div>

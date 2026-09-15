@@ -112,16 +112,26 @@
     CB.util.toast("Profile updated");
   });
 
-  document.getElementById("reset-personalization").addEventListener("click", function () {
-    var confirmed = window.confirm("This clears your name, role, class, interests, saved items and photos on this device. Continue?");
-    if (!confirmed) return;
-    CB.storage.clearProfile();
-    localStorage.removeItem("campusboard.saved");
-    localStorage.removeItem("campusboard.crAnnouncements");
-    localStorage.removeItem("campusboard.calendarNotes");
-    localStorage.removeItem("campusboard.polaroids");
-    window.location.href = "index.html";
-  });
+  var resetBtn = document.getElementById("reset-personalization");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", function () {
+      var confirmed = window.confirm("This logs you out and clears saved data on this device. Continue?");
+      if (!confirmed) return;
+      function finishLogout() {
+        CB.storage.clearProfile();
+        localStorage.removeItem("campusboard.saved");
+        localStorage.removeItem("campusboard.crAnnouncements");
+        localStorage.removeItem("campusboard.calendarNotes");
+        localStorage.removeItem("campusboard.polaroids");
+        window.location.href = "index.html";
+      }
+      if (CB.api && CB.api.logout) {
+        CB.api.logout().then(finishLogout, finishLogout);
+      } else {
+        finishLogout();
+      }
+    });
+  }
 
   /* ---------------- saved items ---------------- */
 
