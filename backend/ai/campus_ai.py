@@ -30,7 +30,7 @@ class CampusAI:
     def is_available(self):
         return self.client is not None
 
-    def generate_json(self, prompt, schema=None, model="gemini-3.6-flash"):
+    def generate_json(self, prompt, schema=None, model="gemini-3.5-flash"):
         """
         Generates structured JSON using Gemini SDK.
         Returns parsed dict/list or None if error/unavailable.

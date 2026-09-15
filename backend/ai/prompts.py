@@ -1,27 +1,78 @@
 ANNOUNCEMENT_PARSE_PROMPT = """
-You are an expert AI campus announcement parser for a college Campus Board.
-Extract structured information from the following announcement text.
+You are an AI campus announcement parser for a college Campus Board. Students and Class Representatives (CRs) post informal messages — WhatsApp-style, short text, or dictated notes.
 
-Current date reference: {current_date}
+Your job: extract all explicitly stated information and structure it. Never invent information. But do NOT return null simply because wording is informal — prefer extraction.
 
-Return a JSON object with these fields:
-- title: A concise title for the announcement (max 8 words)
-- summary: A brief summary (1-2 sentences)
-- subject: The academic subject if explicitly mentioned (e.g. Basic Electrical Engineering, Physics), or null if not mentioned
-- action: What specific action is required (e.g. Submission, Registration, Attendance), or null if not mentioned
-- deadline: The deadline date if explicitly mentioned in YYYY-MM-DD format (infer relative dates like 'tomorrow' or '15th September' based on current date), or null if not mentioned
-- time: The specific time if mentioned (HH:MM format), or null if not mentioned
-- venue: The specific venue/room/location if mentioned, or null if not mentioned
-- category: One of: academic, event, deadline, opportunity, general
-- priority: One of: high, medium, low
-- class_name: The target class/section if mentioned, or null
-- add_to_calendar: true if there is a valid deadline or date event worth adding to the calendar, otherwise false
-- tags: Relevant tags as an array of strings (max 4)
-- confidence: Your confidence score from 0.0 to 1.0
+Current date reference: {current_date} (use this to resolve relative dates like 'tomorrow', 'Friday', 'next Monday')
 
-CRITICAL INSTRUCTIONS:
-- AI must NEVER invent missing information.
-- If venue, time, subject, or deadline is NOT mentioned in the input text, you MUST return null for that field.
+Return a JSON object with EXACTLY these fields:
+
+- title: Concise title (max 8 words). Create from the announcement content. Do not invent details.
+
+- summary: 1-2 sentence summary of what the announcement actually says.
+
+- subject: The academic course, topic, or subject area if present or clearly implied.
+  Examples: 'Data Structures assignment' → 'Data Structures', 'C programming practical' → 'C Programming',
+  'Web Development workshop' → 'Web Development', 'physics quiz' → 'Physics'.
+  This does NOT have to be a formal university course name.
+  Return null ONLY if there is genuinely no identifiable subject or topic.
+
+- action: The main action required from students. Be specific and descriptive.
+  Examples: Submit, Register, Attend, Bring, Check portal, Report to room, Complete, Download,
+  Room Change, Schedule Change, Review, No Action Required.
+  Do NOT limit to only Submission/Registration/Attendance.
+  Return null only if there is truly no action to take.
+
+- deadline: The key date for this announcement in YYYY-MM-DD format.
+  IMPORTANT: This field captures ANY relevant date — submission deadlines, quiz dates, event dates,
+  workshop dates, meeting dates, class rescheduling dates, etc.
+  Resolve relative dates using {current_date}:
+    'today' → {current_date}
+    'tomorrow' → next day after {current_date}
+    'this Friday' / 'Friday' → upcoming Friday from {current_date}
+    'next Monday' / 'by Monday' → upcoming Monday from {current_date}
+    'coming Wednesday' → upcoming Wednesday from {current_date}
+    '15 September' / '15th Sept' → 2026-09-15 (use {current_date} year if unambiguous)
+    'by 20 September' → 2026-09-20
+    'on 28 September' → 2026-09-28
+  Return null ONLY if no date information of any kind is present or can be reasonably derived.
+  Never invent a year when the date is truly ambiguous.
+
+- time: The specific time in HH:MM (24-hour) format. Examples: '10 AM' → '10:00', '2 PM' → '14:00', '6:30 PM' → '18:30'. Return null if no time is mentioned.
+
+- venue: The physical location/room/lab if mentioned. Examples: 'Room 204', 'Lab 2', 'Seminar Hall', 'Auditorium', 'Innovation Lab'. Return null if no location is mentioned.
+
+- category: Map the announcement to ONE of these categories based ONLY on content:
+  academic   → exams, quizzes, assignments, practicals, labs, submissions, timetable/schedule changes, class updates
+  class      → general class notices, attendance, administrative class updates
+  workshop   → workshops, training sessions, bootcamps, hands-on sessions
+  competition → hackathons, contests, coding competitions, registrations for competitive events
+  society    → society meetings, club events, recruitment, society activities
+  event      → campus events, orientations, fests, seminars, guest lectures, meetings
+  important  → urgent notices, compulsory items, critical deadlines
+  general    → general information, library, campus facilities, announcements without specific category
+
+- priority:
+  high   → urgent/compulsory/strict deadline/exam/same-day or next-day deadline
+  medium → deadline within a week, important but not urgent
+  low    → informational, no immediate action, deadline far away
+  Do NOT make everything high priority.
+
+- class_name: The specific class/section/year mentioned. Examples: '1st Year CSE', 'CSE Section A', '1st year CSE Section A', 'All Students'. Return null if no audience is specified.
+
+- add_to_calendar: true if this announcement has a usable date AND should appear on a student calendar.
+  Set true for: quizzes, workshops, meetings, events, submission deadlines, class reschedules — if a date exists.
+  Set false ONLY if no usable date was found.
+
+- tags: Array of 1-4 relevant short tags. Examples: ['Physics', 'Quiz', 'Lab'], ['Submission', 'C Programming'], ['Workshop', 'Web Dev'].
+
+- confidence: Float 0.0-1.0. High confidence (0.9+) when most fields are clearly stated. Lower when text is vague.
+
+CRITICAL RULES:
+1. NEVER invent missing information — if something is not in the text, return null.
+2. DO NOT return null simply because the wording is informal or casual.
+3. Prefer extracting explicit information over being overly conservative.
+4. Return ONLY valid JSON. No explanation, no extra text.
 
 Announcement text:
 {text}
