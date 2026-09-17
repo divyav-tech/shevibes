@@ -184,3 +184,29 @@ def create_notice():
         'calendar_event_created': cal_event_created if data.get('add_to_calendar') else None,
         'notice': data
     }), 201
+
+@notices_bp.route('/api/notices/<int:notice_id>', methods=['DELETE'])
+@cr_required
+def delete_notice(notice_id):
+    try:
+        notice = db.fetch_one("SELECT * FROM announcements WHERE id = %s", (notice_id,))
+        if not notice:
+            # Check in-memory store
+            global _in_memory_notices
+            for i, n in enumerate(_in_memory_notices):
+                if n.get('id') == notice_id:
+                    _in_memory_notices.pop(i)
+                    return jsonify({'message': 'Notice deleted successfully (local mode)'}), 200
+            return jsonify({'error': 'Notice not found'}), 404
+
+        # Delete dependent records first to avoid foreign key constraint errors
+        db.execute_query("DELETE FROM calendar_events WHERE announcement_id = %s", (notice_id,))
+        db.execute_query("DELETE FROM saved_items WHERE item_type = 'announcement' AND item_id = %s", (notice_id,))
+        
+        # Delete the announcement
+        db.execute_query("DELETE FROM announcements WHERE id = %s", (notice_id,))
+        
+        return jsonify({'message': 'Notice deleted successfully'}), 200
+    except Exception as e:
+        logger.error(f"DB Error deleting notice: {e}")
+        return jsonify({'error': 'Failed to delete notice'}), 500

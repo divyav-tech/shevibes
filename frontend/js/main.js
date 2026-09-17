@@ -847,6 +847,9 @@
       var completeButton = taskIsActionable(item)
         ? '<button class="task-complete-btn card-task-complete' + (task && task.completed ? ' is-completed' : '') + '" data-complete="' + type + ':' + item.id + '" aria-label="' + (task && task.completed ? 'Mark incomplete' : 'Mark complete') + '" title="' + (task && task.completed ? 'Mark incomplete' : 'Mark complete') + '">' + (task && task.completed ? '✓' : '○') + '</button>'
         : '';
+      var deleteButton = (type === "announcement" && getProfile() && getProfile().role === "cr")
+        ? '<button class="info-card-delete" data-delete="' + item.id + '" aria-label="Delete" title="Delete" style="background:none;border:none;cursor:pointer;opacity:0.6;font-size:1.1rem;margin-left:8px;">🗑</button>'
+        : '';
       card.innerHTML =
         '<div class="info-card-head">' +
           '<div>' +
@@ -856,7 +859,7 @@
           '<div class="info-card-actions">' + completeButton +
           '<button class="info-card-save' + (isSaved(type, item.id) ? " is-saved" : "") + '" data-save="' + type + ':' + item.id + '" aria-label="Save">' +
             (isSaved(type, item.id) ? "★" : "☆") +
-          '</button></div>' +
+          '</button>' + deleteButton + '</div>' +
         '</div>' +
         '<p class="info-card-desc">' + item.description + '</p>' +
         '<div class="info-card-meta">' +
@@ -868,7 +871,7 @@
           : '') +
         (item.aiGenerated ? '<span class="ai-badge">AI sorted this</span>' : '');
       card.addEventListener("click", function (e) {
-        if (e.target.closest("[data-save]")) return;
+        if (e.target.closest("[data-save]") || e.target.closest("[data-delete]") || e.target.closest("[data-complete]")) return;
         item.savedType = type;
         openDetailModal(item);
       });
@@ -898,6 +901,22 @@
         var card = btn.closest(".info-card");
         if (card) card.classList.toggle("is-completed", next.completed);
         toast(next.completed ? "Marked complete ✓" : "Marked as incomplete");
+      });
+    });
+
+    container.querySelectorAll("[data-delete]").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.preventDefault(); e.stopPropagation();
+        if (confirm("Are you sure you want to delete this announcement?")) {
+          api.deleteNotice(btn.dataset.delete).then(function(res) {
+            if (res && res.message) {
+              toast("Announcement deleted");
+              window.location.reload();
+            } else {
+              toast(res && res.error ? res.error : "Failed to delete announcement");
+            }
+          });
+        }
       });
     });
   }
@@ -1124,6 +1143,25 @@
       return fetch(API_BASE + "/api/notices", { credentials: "include" })
         .then(function(r) { return r.json(); })
         .catch(function() { return null; });
+    },
+    deleteNotice: function(id) {
+      return fetch(API_BASE + "/api/notices/" + id, {
+        method: "DELETE",
+        credentials: "include"
+      })
+      .then(function(r) {
+        if (r.status === 403) {
+          toast("Access denied: Class Representative authorization required.");
+          return { error: "CR access required", status: 403 };
+        }
+        if (r.status === 401) {
+          clearProfile();
+          window.location.replace("index.html");
+          return { error: "Authentication required", status: 401 };
+        }
+        return r.json();
+      })
+      .catch(function() { return null; });
     },
     postNotice: function(notice) {
       return fetch(API_BASE + "/api/notices", {

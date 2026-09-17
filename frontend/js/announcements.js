@@ -114,7 +114,9 @@
           (item.deadline ? '<button class="task-complete-btn card-task-complete' + (task && task.completed ? " is-completed" : "") + '" data-complete="' + item.id + '" aria-label="' + (task && task.completed ? "Mark incomplete" : "Mark complete") + '" title="' + (task && task.completed ? "Mark incomplete" : "Mark complete") + '">' + (task && task.completed ? "✓" : "○") + '</button>' : '') +
           '<button class="info-card-save' + (CB.storage.isSaved("announcement", item.id) ? " is-saved" : "") + '" data-save="' + item.id + '" aria-label="Save">' +
             (CB.storage.isSaved("announcement", item.id) ? "★" : "☆") +
-          '</button></div>' +
+          '</button>' +
+          (profile && profile.role === "cr" ? '<button class="info-card-delete" data-delete="' + item.id + '" aria-label="Delete" title="Delete" style="background:none;border:none;cursor:pointer;opacity:0.6;font-size:1.1rem;margin-left:8px;">🗑</button>' : '') +
+          '</div>' +
         '</div>' +
         '<p class="info-card-desc">' + item.description + '</p>' +
         '<div class="info-card-meta">' +
@@ -124,7 +126,7 @@
         '</div>' +
         (item.aiGenerated ? '<span class="ai-badge">AI sorted this</span>' : '');
       card.addEventListener("click", function (e) {
-        if (e.target.closest("[data-save]")) return;
+        if (e.target.closest("[data-save]") || e.target.closest("[data-delete]")) return;
         item.savedType = "announcement";
         CB.ui.openDetailModal(item);
       });
@@ -149,6 +151,24 @@
         btn.setAttribute("aria-label", next.completed ? "Mark incomplete" : "Mark complete");
         btn.closest(".info-card").classList.toggle("is-completed", next.completed);
         CB.util.toast(next.completed ? "Marked complete ✓" : "Marked as incomplete");
+      });
+    });
+
+    container.querySelectorAll("[data-delete]").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.preventDefault(); e.stopPropagation();
+        if (confirm("Are you sure you want to delete this announcement?")) {
+          var id = btn.dataset.delete;
+          CB.api.deleteNotice(id).then(function(res) {
+            if (res && res.message) {
+              CB.util.toast("Announcement deleted");
+              allAnnouncements = allAnnouncements.filter(function(a) { return String(a.id) !== String(id); });
+              render();
+            } else {
+              CB.util.toast(res && res.error ? res.error : "Failed to delete announcement");
+            }
+          });
+        }
       });
     });
   }
