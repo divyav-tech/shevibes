@@ -79,7 +79,9 @@ Announcement text:
 """
 
 PRIORITIZE_PROMPT = """
-You are a personalized campus relevance engine. Evaluate relevance for a list of items for a specific student.
+You are a personalized campus prioritisation engine. Evaluate priority and relevance for a list of items for a specific student.
+
+Current Date Reference: {current_date}
 
 Student Profile:
 {profile}
@@ -87,11 +89,17 @@ Student Profile:
 Items to evaluate:
 {items}
 
+Evaluation Principles:
+1. URGENCY: Interpret both structured deadlines and natural-language timing (e.g., 'today', 'tomorrow', 'tonight', 'in 2 days', 'this Friday', 'next week', 'in 2 weeks', 'next month', or past deadlines) relative to {current_date}. Imminent deadlines (today/tomorrow) are high urgency. Expired or past deadlines must NEVER be marked 'high'.
+2. IMPORTANCE: Academic deadlines, lab/assignment submissions, required administrative notices, and high-impact opportunities (scholarships/internships) are inherently more important than casual society events or general notices.
+3. RELEVANCE: Check alignment with the student's year, branch, section, and stated interests.
+4. SYNTHESIS: Balance urgency, importance, and relevance. An optional workshop or contest next month should NOT be high priority just because it matches an interest; an academic submission due tomorrow must NOT be low priority just because it lacks an interest match.
+
 For each item, return a JSON array of objects with:
 - id: Item ID
-- relevance_score: Float between 0.0 and 1.0 (higher means more relevant to user's interests, branch, year, or section)
-- priority: One of "high", "medium", "low"
-- reason: A short 1-sentence personalized explanation starting with "✦ Why you're seeing this: ..."
+- relevance_score: Float between 0.0 and 1.0 (overall weighted score)
+- priority: Exactly one of "high", "medium", "low"
+- reason: A concise 1-sentence explanation starting with "✦ " citing the dominant factor (e.g. "✦ Due tomorrow · Mandatory academic submission", "✦ Deadline in 2 weeks · Matches your interest in Tech", "✦ No immediate deadline · General campus update"). Do not invent deadlines or requirements not present in the data.
 """
 
 CHAT_DIGEST_PROMPT = """

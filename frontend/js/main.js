@@ -1217,8 +1217,9 @@
       card.className = "info-card " + tone;
       var task = taskIsActionable(item) ? getTaskState(type, item.id) : null;
       if (task && task.completed) card.classList.add("is-completed");
-      var priorityBadge = taskIsActionable(item) && ((task && task.priority) || item.priority)
-        ? '<span class="task-priority-badge priority-' + ((task && task.priority) || item.priority) + '">' + ((task && task.priority) || item.priority) + '</span>' : '';
+      var priorityVal = (task && task.priority) || item.priority;
+      var priorityBadge = priorityVal
+        ? '<span class="task-priority-badge priority-' + String(priorityVal).toLowerCase() + '">' + priorityVal + '</span>' : '';
       var completeButton = taskIsActionable(item)
         ? '<button class="task-complete-btn card-task-complete' + (task && task.completed ? ' is-completed' : '') + '" data-complete="' + type + ':' + item.id + '" aria-label="' + (task && task.completed ? 'Mark incomplete' : 'Mark complete') + '" title="' + (task && task.completed ? 'Mark incomplete' : 'Mark complete') + '">' + (task && task.completed ? '✓' : '○') + '</button>'
         : '';

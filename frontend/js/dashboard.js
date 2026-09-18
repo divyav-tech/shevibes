@@ -27,7 +27,7 @@
     return map[type] || "Event";
   }
   function toOpportunityCard(o) {
-    return { id: o.id, title: o.title, description: o.description, category: o.category, deadline: o.deadline, source: o.org, venue: o.eligibility };
+    return { id: o.id, title: o.title, description: o.description, category: o.category, deadline: o.deadline, source: o.org, venue: o.eligibility, priority: o.priority };
   }
 
   function renderDailyBriefing() {
@@ -81,8 +81,13 @@
     CB.api.prioritize(profile, forYouCards).then(function(priorities) {
       if (priorities && priorities.length === forYouCards.length) {
         forYouCards.forEach(function(card, idx) {
-          if (priorities[idx] && priorities[idx].reason) {
-            card.description = priorities[idx].reason + " · " + card.description;
+          if (priorities[idx]) {
+            if (priorities[idx].priority) {
+              card.priority = priorities[idx].priority;
+            }
+            if (priorities[idx].reason) {
+              card.description = priorities[idx].reason + " · " + card.description;
+            }
           }
         });
       }
