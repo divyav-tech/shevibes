@@ -157,6 +157,15 @@
   render();
   document.addEventListener("cb:task-changed", render);
 
+  document.addEventListener("cb:announcement-deleted", function (e) {
+    var deletedId = e && e.detail && e.detail.id;
+    if (!deletedId) return;
+    allAnnouncements = allAnnouncements.filter(function (a) {
+      return String(a.id) !== String(deletedId);
+    });
+    render();
+  });
+
   CB.api.getNotices().then(function (res) {
     // Keep the polished demo/sample announcements when the database is empty.
     if (res && Array.isArray(res.notices) && res.notices.length) {

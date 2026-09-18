@@ -155,59 +155,110 @@
   /* ---------------- saved items ---------------- */
 
   function renderSaved() {
-    var saved = CB.storage.getSaved();
-    var announcements = CB.data.getAllAnnouncements();
-    var opportunities = CB.data.opportunities;
-    var events = CB.data.getAllEvents();
+    var noticesPromise = (CB.api && CB.api.getNotices) ? CB.api.getNotices() : Promise.resolve(null);
+    var oppsPromise = (CB.api && CB.api.getOpportunities) ? CB.api.getOpportunities() : Promise.resolve(null);
 
-    var items = [];
-    (saved.announcement || []).forEach(function (id) {
-      var found = announcements.find(function (a) { return a.id === id; });
-      if (found) items.push({ type: "announcement", label: "Announcement", data: found });
-    });
-    (saved.opportunity || []).forEach(function (id) {
-      var found = opportunities.find(function (o) { return o.id === id; });
-      if (found) items.push({ type: "opportunity", label: "Opportunity", data: found });
-    });
-    (saved.event || []).forEach(function (id) {
-      var found = events.find(function (e) { return e.id === id; });
-      if (found) items.push({ type: "event", label: "Event", data: found });
-    });
+    Promise.all([noticesPromise, oppsPromise]).then(function (results) {
+      var noticesRes = results[0];
+      var oppsRes = results[1];
 
-    document.getElementById("saved-count-line").textContent = items.length + " saved";
+      var saved = CB.storage.getSaved();
+      var announcements = CB.data.getAllAnnouncements();
+      if (noticesRes && Array.isArray(noticesRes.notices)) {
+        var apiAnnouncements = noticesRes.notices.map(function (row) {
+          return {
+            id: String(row.id),
+            title: row.title,
+            description: row.summary || row.content,
+            category: row.category,
+            deadline: row.deadline ? String(row.deadline).slice(0, 10) : null,
+            source: row.source || "Campus Board",
+            forClass: row.class_name || "All Students",
+            priority: row.priority || "medium",
+            aiGenerated: !!row.ai_generated
+          };
+        });
+        apiAnnouncements.forEach(function (apiA) {
+          if (!announcements.some(function (a) { return String(a.id) === String(apiA.id); })) {
+            announcements.push(apiA);
+          }
+        });
+      }
 
-    var list = document.getElementById("saved-list");
-    list.innerHTML = "";
-    if (!items.length) {
-      list.innerHTML = '<p class="search-empty">Nothing saved yet — tap ☆ on any card to keep it here.</p>';
-      return;
-    }
+      var opportunities = (CB.data.opportunities || []).slice();
+      if (oppsRes && Array.isArray(oppsRes.opportunities)) {
+        var apiOpps = oppsRes.opportunities.map(function (row) {
+          return {
+            id: String(row.id),
+            title: row.title,
+            description: row.description,
+            category: row.category,
+            deadline: row.deadline ? String(row.deadline).slice(0, 10) : null,
+            org: row.org || row.source || "Campus",
+            eligibility: row.eligibility || "All Students",
+            priority: row.priority || "medium"
+          };
+        });
+        apiOpps.forEach(function (apiO) {
+          if (!opportunities.some(function (o) { return String(o.id) === String(apiO.id); })) {
+            opportunities.push(apiO);
+          }
+        });
+      }
 
-    items.forEach(function (entry) {
-      var d = entry.data;
-      var title = d.title;
-      var deadline = d.deadline;
-      var source = d.source || d.org;
+      var events = CB.data.getAllEvents();
 
-      var card = document.createElement("div");
-      card.className = "info-card tone-rose";
-      card.innerHTML =
-        '<div class="info-card-head">' +
-          '<div><span class="info-card-tag">' + entry.label + '</span><p class="info-card-title">' + title + '</p></div>' +
-          '<button class="info-card-save is-saved" data-unsave="' + entry.type + ':' + d.id + '" aria-label="Remove from saved">★</button>' +
-        '</div>' +
-        '<div class="info-card-meta"><span>Deadline: <strong>' + CB.util.formatDate(deadline) + '</strong></span><span>Source: <strong>' + source + '</strong></span></div>';
-      list.appendChild(card);
-    });
-
-    list.querySelectorAll("[data-unsave]").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        var parts = btn.dataset.unsave.split(":");
-        CB.storage.toggleSaved(parts[0], parts[1]);
-        CB.util.toast("Removed from saved");
-        renderSaved();
+      var items = [];
+      (saved.announcement || []).forEach(function (id) {
+        var found = announcements.find(function (a) { return String(a.id) === String(id); });
+        if (found) items.push({ type: "announcement", label: "Announcement", data: found });
       });
-    });
+      (saved.opportunity || []).forEach(function (id) {
+        var found = opportunities.find(function (o) { return String(o.id) === String(id); });
+        if (found) items.push({ type: "opportunity", label: "Opportunity", data: found });
+      });
+      (saved.event || []).forEach(function (id) {
+        var found = events.find(function (e) { return String(e.id) === String(id); });
+        if (found) items.push({ type: "event", label: "Event", data: found });
+      });
+
+      var countEl = document.getElementById("saved-count-line");
+      if (countEl) countEl.textContent = items.length + " saved";
+
+      var list = document.getElementById("saved-list");
+      if (!list) return;
+      list.innerHTML = "";
+      if (!items.length) {
+        list.innerHTML = '<p class="search-empty">Nothing saved yet — tap ☆ on any card to keep it here.</p>';
+        return;
+      }
+
+      items.forEach(function (entry) {
+        var d = entry.data;
+        var title = d.title;
+        var deadline = d.deadline;
+        var source = d.source || d.org;
+
+        var card = document.createElement("div");
+        card.className = "info-card tone-rose";
+        card.innerHTML =
+          '<div class="info-card-head">' +
+            '<div><span class="info-card-tag">' + entry.label + '</span><p class="info-card-title">' + title + '</p></div>' +
+            '<button class="info-card-save is-saved" data-unsave="' + entry.type + ':' + d.id + '" aria-label="Remove from saved">★</button>' +
+          '</div>' +
+          '<div class="info-card-meta"><span>Deadline: <strong>' + CB.util.formatDate(deadline) + '</strong></span><span>Source: <strong>' + source + '</strong></span></div>';
+        list.appendChild(card);
+      });
+
+      list.querySelectorAll("[data-unsave]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var parts = btn.dataset.unsave.split(":");
+          CB.storage.toggleSaved(parts[0], parts[1]);
+          CB.util.toast("Removed from saved");
+          renderSaved();
+        });
+      });
+    }).catch(function () {});
   }
 
   renderSaved();

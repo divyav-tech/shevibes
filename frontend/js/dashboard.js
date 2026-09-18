@@ -274,7 +274,7 @@
 
     function setEditable(editable) {
       Object.keys(fields).forEach(function (key) {
-        fields[key].disabled = !editable;
+        fields[key].disabled = (key === "calendar") ? false : !editable;
         var wrapper = fields[key].closest(".ai-result-field");
         if (wrapper) wrapper.classList.toggle("is-editing", editable);
       });
