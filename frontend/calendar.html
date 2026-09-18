@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendar — Campus Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Archivo:wght@400;500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/dashboard.css">
+<link rel="stylesheet" href="css/pages.css">
+</head>
+<body class="app-body">
+
+<header class="app-header">
+  <div class="app-header-inner">
+    <a class="wordmark" href="dashboard.html">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <circle cx="10" cy="6" r="3" fill="#B97D7B"/>
+        <circle cx="6" cy="11" r="3" fill="#B97D7B"/>
+        <circle cx="14" cy="11" r="3" fill="#DDD3C9"/>
+        <circle cx="10" cy="14" r="2.4" fill="#7E745B"/>
+      </svg>
+      Campus Board
+    </a>
+    <nav class="main-nav" id="app-nav">
+      <a href="dashboard.html">Home</a>
+      <a href="announcements.html">Announcements</a>
+      <a href="opportunities.html">Opportunities</a>
+      <a href="calendar.html" class="is-current">Calendar</a>
+      <a href="past-events.html">Past Events</a>
+      <a href="profile.html">My Profile</a>
+    </nav>
+    <div class="app-header-actions">
+      <div class="app-search">
+        <input type="search" id="global-search" placeholder="Search announcements, opportunities…" aria-label="Search Campus Board">
+        <div class="app-search-results" id="search-results" hidden></div>
+      </div>
+      <div class="app-notif">
+        <button class="notif-btn" id="notif-btn" aria-haspopup="true" aria-expanded="false" aria-label="Notifications">
+          🔔<span class="notif-dot" id="notif-dot" hidden></span>
+        </button>
+        <div class="notif-dropdown" id="notif-dropdown" hidden>
+          <div class="notif-dropdown-head"><span>Notifications</span><button type="button" id="notif-mark-all">Mark all as read</button></div>
+          <div class="notif-list" id="notif-list"></div>
+        </div>
+      </div>
+      <a class="app-avatar" href="profile.html" id="app-avatar">S</a>
+      <button class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="app-nav" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="dash-main">
+  <div class="page-head">
+    <span class="hand-note">just between classes ✦</span>
+    <h1>Calendar</h1>
+    <p>Deadlines, exams, workshops and society events for your class and campus.</p>
+  </div>
+
+  <div class="calendar-tabs">
+    <button class="filter-chip is-active" id="tab-month" type="button">Month</button>
+    <button class="filter-chip" id="tab-upcoming" type="button">Upcoming</button>
+  </div>
+
+  <div id="month-view">
+    <div class="calendar-nav">
+      <button class="calendar-nav-btn" id="cal-prev" type="button" aria-label="Previous month">←</button>
+      <span class="calendar-nav-label" id="cal-month-label">September 2026</span>
+      <button class="calendar-nav-btn" id="cal-next" type="button" aria-label="Next month">→</button>
+    </div>
+    <div class="calendar-grid" id="calendar-grid"></div>
+    <div class="calendar-legend" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:18px;font-size:0.78rem;color:var(--color-text-muted);">
+      <span><span style="display:inline-block;width:10px;height:10px;background:var(--color-rose);border-radius:2px;margin-right:5px;"></span>Deadline / Exam</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:var(--color-sage);border-radius:2px;margin-right:5px;"></span>Event / Workshop / Society</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:var(--color-cream);border:1.5px solid var(--color-olive);border-radius:2px;margin-right:5px;"></span>Academic</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:var(--color-blush);border-radius:2px;margin-right:5px;"></span>My note</span>
+    </div>
+
+    <div class="sticky-wall-head" style="margin-top:38px;">
+      <span class="hand-note">pinned for later ✦</span>
+      <h2 style="font-family:var(--font-display);font-weight:500;font-size:1.3rem;margin:2px 0 18px;">Pinned this month</h2>
+    </div>
+    <div class="cal-sticky-wall" id="cal-sticky-wall"></div>
+  </div>
+
+  <div id="upcoming-view" hidden>
+    <div class="upcoming-list" id="upcoming-list"></div>
+  </div>
+</main>
+
+<!-- Add-to-day modal -->
+<div class="cb-modal" id="add-day-modal" aria-hidden="true">
+  <div class="cb-modal-backdrop" data-close-day-modal></div>
+  <div class="cb-modal-panel add-day-modal-panel" role="dialog" aria-modal="true">
+    <button class="cb-modal-close" type="button" aria-label="Close" data-close-day-modal>×</button>
+    <p class="add-day-title">Add to this day ✦</p>
+    <p class="add-day-date" id="add-day-date-label">September 18</p>
+    <p class="hand-note" style="margin-bottom:8px;">what do you want to remember?</p>
+    <textarea id="add-day-text" rows="3" style="width:100%;border:2px dashed var(--color-tan);border-radius:8px;padding:10px 12px;font-family:var(--font-body);font-size:0.92rem;background:var(--color-cream);" placeholder="Finish C practical file"></textarea>
+    <div class="add-day-type-row" id="add-day-type-row">
+      <button class="add-day-type-btn is-active" type="button" data-note-type="Deadline">Deadline</button>
+      <button class="add-day-type-btn" type="button" data-note-type="Exam">Exam</button>
+      <button class="add-day-type-btn" type="button" data-note-type="Event">Event</button>
+      <button class="add-day-type-btn" type="button" data-note-type="Reminder">Reminder</button>
+    </div>
+    <div class="task-settings calendar-task-settings">
+      <label>Priority <select id="add-day-priority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></label>
+      <label>Reminder <select id="add-day-reminder"><option value="none" selected>No reminder</option><option value="1-day">1 day before</option><option value="2-days">2 days before</option><option value="1-week">1 week before</option></select></label>
+    </div>
+    <div class="cb-modal-footer" style="margin-top:14px;">
+      <button class="btn btn-ghost" type="button" data-close-day-modal>Cancel</button>
+      <button class="btn btn-primary" type="button" id="add-day-save">Save</button>
+    </div>
+    <div class="day-notes-existing" id="day-notes-existing"></div>
+  </div>
+</div>
+
+<script src="js/main.js"></script>
+<script src="js/calendar.js"></script>
+</body>
+</html>
