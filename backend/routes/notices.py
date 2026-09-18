@@ -108,34 +108,29 @@ def create_notice():
         if cursor and cursor.lastrowid:
             announcement_id = cursor.lastrowid
 
-            if data.get('add_to_calendar') and deadline:
+            if deadline:
                 cal_category_map = {
-                    'academic': 'academic',
-                    'deadline': 'deadline',
-                    'important': 'deadline',
-                    'opportunity': 'opportunity',
-                    'workshop': 'opportunity',
-                    'competition': 'opportunity',
-                    'event': 'event',
-                    'class': 'event',
-                    'society': 'event',
-                    'general': 'event',
+                    'academic': 'academic', 'deadline': 'deadline', 'important': 'deadline',
+                    'opportunity': 'opportunity', 'workshop': 'opportunity', 'competition': 'opportunity',
+                    'event': 'event', 'class': 'event', 'society': 'event', 'general': 'event',
                 }
                 cal_category = cal_category_map.get(category, 'event')
-                evt_query = """
-                INSERT INTO calendar_events (title, description, event_date, location, category, announcement_id, created_by)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """
-                evt_params = (title, summary, deadline, venue or 'Campus', cal_category, announcement_id, user_id)
-                evt_cursor = db.execute_query(evt_query, evt_params)
-                if evt_cursor is not None:
-                    cal_event_created = True
+                try:
+                    evt_query = """
+                    INSERT INTO calendar_events (title, description, event_date, event_time, location, category, announcement_id, created_by)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    """
+                    evt_params = (title, summary, deadline, time, venue or 'Campus', cal_category, announcement_id, user_id)
+                    evt_cursor = db.execute_query(evt_query, evt_params)
+                    cal_event_created = bool(evt_cursor and evt_cursor.lastrowid)
+                except Exception as calendar_error:
+                    logger.error("Calendar mirror failed for announcement %s: %s", announcement_id, calendar_error)
 
             return jsonify({
                 'message': 'Notice created successfully',
                 'id': announcement_id,
-                'calendar_event_created': cal_event_created if data.get('add_to_calendar') else None,
-                'notice': data
+                'calendar_event_created': cal_event_created if deadline else None,
+                'notice': dict(data, id=announcement_id, posted_by=user_id)
             }), 201
     except Exception as e:
         logger.error(f"DB Error saving notice: {e}")
@@ -163,7 +158,7 @@ def create_notice():
     }
     _in_memory_notices.insert(0, notice_obj)
 
-    if data.get('add_to_calendar') and deadline:
+    if deadline:
         from backend.routes.calendar import _in_memory_calendar_events
         _in_memory_calendar_events.append({
             'id': len(_in_memory_calendar_events) + 1,
@@ -181,6 +176,44 @@ def create_notice():
     return jsonify({
         'message': 'Notice created successfully (local mode)',
         'id': announcement_id,
-        'calendar_event_created': cal_event_created if data.get('add_to_calendar') else None,
+        'calendar_event_created': cal_event_created if deadline else None,
         'notice': data
     }), 201
+
+
+@notices_bp.route('/api/notices/<int:notice_id>', methods=['DELETE'])
+@cr_required
+def delete_notice(notice_id):
+    """CR moderation: remove any announcement from the board.
+
+    Calendar events created from the announcement are removed first because
+    the schema uses a foreign key without ON DELETE CASCADE.
+    """
+    user = get_current_user()
+    user_id = user['id'] if user else None
+
+    try:
+        row = db.fetch_one("SELECT id, posted_by FROM announcements WHERE id = %s", (notice_id,))
+        if row:
+            db.execute_query("DELETE FROM calendar_events WHERE announcement_id = %s", (notice_id,))
+            cursor = db.execute_query("DELETE FROM announcements WHERE id = %s", (notice_id,))
+            if cursor is not None:
+                return jsonify({'message': 'Announcement deleted', 'id': notice_id, 'success': True}), 200
+    except Exception as e:
+        logger.error(f"DB Error deleting notice: {e}")
+
+    # Local/development mode.
+    for i, notice in enumerate(_in_memory_notices):
+        if str(notice.get('id')) == str(notice_id):
+            _in_memory_notices.pop(i)
+            try:
+                from backend.routes.calendar import _in_memory_calendar_events
+                _in_memory_calendar_events[:] = [
+                    e for e in _in_memory_calendar_events
+                    if str(e.get('announcement_id')) != str(notice_id)
+                ]
+            except Exception:
+                pass
+            return jsonify({'message': 'Announcement deleted (local mode)', 'id': notice_id, 'success': True}), 200
+
+    return jsonify({'error': 'Announcement not found'}), 404

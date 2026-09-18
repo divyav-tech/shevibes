@@ -42,22 +42,37 @@
 
       if (headline) headline.textContent = res.headline;
 
+      function findBriefingItem(item) {
+        var title = String(item.title || "").trim().toLowerCase();
+        var announcement = announcements.find(function (a) { return String(a.title || "").trim().toLowerCase() === title; });
+        if (announcement) { announcement.savedType = "announcement"; return announcement; }
+        var opportunity = opportunities.find(function (o) { return String(o.title || "").trim().toLowerCase() === title; });
+        if (opportunity) return toOpportunityCard(opportunity);
+        var event = events.find(function (e) { return String(e.title || "").trim().toLowerCase() === title; });
+        if (event) return { id: event.id, title: event.title, description: typeLabel(event.type), category: typeLabel(event.type), deadline: event.date, source: "Campus Calendar", venue: event.venue || "Not specified", savedType: "event" };
+        return { id: "briefing-" + title, title: item.title, description: item.meta || item.reason || "Campus Board item", category: "Campus", deadline: null, source: "Campus Board", venue: "Not specified" };
+      }
+
+      function makeBriefingRow(item, icon, secondary) {
+        var li = document.createElement("li");
+        li.className = "briefing-clickable";
+        li.tabIndex = 0;
+        li.setAttribute("role", "button");
+        li.innerHTML = icon + " <strong>" + item.title + "</strong><br><span style='font-size:0.78rem;color:var(--color-text-muted);'>" + (secondary || "") + "</span><span class='briefing-open-hint'>View details →</span>";
+        var open = function () { CB.ui.openDetailModal(findBriefingItem(item)); };
+        li.addEventListener("click", open);
+        li.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
+        return li;
+      }
+
       if (mustKnowList && res.must_know) {
         mustKnowList.innerHTML = "";
-        res.must_know.forEach(function (item) {
-          var li = document.createElement("li");
-          li.innerHTML = (item.level === "red" ? "🔴 " : "🟡 ") + "<strong>" + item.title + "</strong><br><span style='font-size:0.78rem;color:var(--color-text-muted);'>" + item.meta + "</span>";
-          mustKnowList.appendChild(li);
-        });
+        res.must_know.forEach(function (item) { mustKnowList.appendChild(makeBriefingRow(item, item.level === "red" ? "🔴" : "🟡", item.meta)); });
       }
 
       if (mightLikeList && res.might_like) {
         mightLikeList.innerHTML = "";
-        res.might_like.forEach(function (item) {
-          var li = document.createElement("li");
-          li.innerHTML = "♡ <strong>" + item.title + "</strong><br><span style='font-size:0.78rem;color:var(--color-text-muted);'>" + item.reason + "</span>";
-          mightLikeList.appendChild(li);
-        });
+        res.might_like.forEach(function (item) { mightLikeList.appendChild(makeBriefingRow(item, "♡", item.reason)); });
       }
     });
   }
@@ -136,7 +151,7 @@
   if (CB.api && CB.api.getNotices) {
     CB.api.getNotices().then(function(res) {
       if (res && Array.isArray(res.notices) && res.notices.length) {
-        announcements = res.notices.map(function(row) {
+        var apiAnnouncements = res.notices.map(function(row) {
           return {
             id: String(row.id), title: row.title,
             description: row.description || row.summary || row.content || '',
@@ -145,10 +160,27 @@
             deadline: row.deadline ? String(row.deadline).slice(0, 10) : null,
             category: row.category ? String(row.category).charAt(0).toUpperCase() + String(row.category).slice(1).toLowerCase() : 'General',
             priority: row.priority || 'medium', source: row.source || 'Class Representative',
+            postedBy: row.posted_by || row.postedBy || null,
             venue: row.venue || 'Not specified', aiGenerated: Boolean(row.aiGenerated || row.ai_generated),
             tags: row.tags || []
           };
         }).filter(function(item) { return CB.util.audienceMatches(item.forClass, profile); });
+
+        // Keep locally-posted CR announcements in the dashboard even when the
+        // backend is temporarily stale/unavailable. This also makes a post
+        // appear on the main page immediately after publishing.
+        var localAnnouncements = CB.data.getCrAnnouncements().filter(function(item) {
+          return CB.util.audienceMatches(item.forClass || 'All Students', profile);
+        });
+        var merged = apiAnnouncements.slice();
+        localAnnouncements.forEach(function(item) {
+          var key = String(item.title || '').trim().toLowerCase() + '|' + String(item.deadline || '');
+          var exists = merged.some(function(a) {
+            return String(a.title || '').trim().toLowerCase() + '|' + String(a.deadline || '') === key;
+          });
+          if (!exists) merged.push(item);
+        });
+        announcements = merged;
         renderAll();
       }
     }).catch(function() {});
@@ -303,16 +335,35 @@
         priority: fields.priority.value,
         source: classLabel + " CR",
         forClass: fields.audience ? (fields.audience.value === "__CLASS__" ? classLabel : fields.audience.value === "__YEAR_BRANCH__" ? profile.year + " · " + profile.branch + " · All Sections" : fields.audience.value === "__BRANCH__" ? profile.branch + " · All Years" : fields.audience.value) : classLabel,
-        add_to_calendar: fields.calendar.checked && !!deadline,
+        add_to_calendar: !!deadline,
         tags: currentParsed.tags || [],
         confidence: currentParsed.confidence || 0.9,
-        aiGenerated: true
+        aiGenerated: true,
+        postedBy: profile.id
       };
-      CB.storage.addCrAnnouncement(announcement);
-      CB.api.postNotice(announcement); // Requirement 7 & 8: Persist to backend DB & auto-add calendar_event
-      closePostModal();
-      CB.util.toast("Posted to " + classLabel + " · sorted.");
-      renderAll();
+      postBtn.disabled = true;
+      postBtn.textContent = "Posting…";
+      CB.api.postNotice(announcement).then(function(res) {
+        postBtn.disabled = false;
+        postBtn.textContent = "Post to Class";
+        if (res && !res.error) {
+          // Store the server id locally so the announcement, completion state,
+          // delete action and linked calendar event all refer to the same item.
+          var stored = Object.assign({}, announcement, {
+            id: String(res.id || announcement.id),
+            postedBy: profile.id, posted_by: profile.id,
+            add_to_calendar: !!deadline
+          });
+          // The backend is the source of truth for community announcements.
+          // Do not put a CR post into account-specific local storage, otherwise
+          // it can look like one account's private data on another account.
+          closePostModal();
+          CB.api.getNotices().then(function(){ renderAll(); }).catch(renderAll);
+          CB.util.toast(deadline ? "Posted + added to Calendar ✦" : "Posted to " + classLabel + " · sorted.");
+        } else {
+          CB.util.toast((res && res.error) || "Could not post announcement");
+        }
+      });
     });
 
     /* ---------------- Feature 3: CR AI Chat Digest Modal & Handler ---------------- */
@@ -410,9 +461,14 @@
                   add_to_calendar: !!item.deadline,
                   aiGenerated: true
                 };
-                CB.storage.addCrAnnouncement(ann);
-                CB.api.postNotice(ann); // Persist through backend API
-                CB.util.toast("Approved & posted to Class Board!");
+                CB.api.postNotice(ann).then(function(res){
+                  if (res && !res.error) {
+                    CB.util.toast("Approved & posted to Class Board!");
+                    renderAll();
+                  } else {
+                    CB.util.toast((res && res.error) || "Could not post digest item");
+                  }
+                });
                 card.style.opacity = "0.5";
                 card.querySelector(".approve-digest-item").disabled = true;
                 renderAll();

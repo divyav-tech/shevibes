@@ -67,7 +67,8 @@
       deadline: firstTenChars(row.deadline),
       category: titleCaseCategory(row.category),
       priority: row.priority,
-      source: row.source,
+      source: row.source || "Class Representative",
+      postedBy: row.posted_by || row.postedBy || null,
       tags: row.tags || [],
       venue: row.venue || "Not specified",
       aiGenerated: Boolean(row.aiGenerated || row.ai_generated),
@@ -105,6 +106,9 @@
     cards.forEach(function (item) {
       var card = document.createElement("div");
       var task = item.deadline ? CB.storage.getTaskState("announcement", item.id) : null;
+      // Delete is a moderation control: only CRs see it, and a CR can remove
+      // any announcement on the board (not just announcements they posted).
+      var canDelete = profile.role === "Class Representative";
       card.className = "info-card " + item._tone + (task && task.completed ? " is-completed" : "");
       var priority = (task && task.priority) || item.priority;
       card.innerHTML =
@@ -112,9 +116,11 @@
           '<div><span class="info-card-tag">' + item.category + '</span>' + (priority ? '<span class="task-priority-badge priority-' + priority + '">' + priority + '</span>' : '') + '<p class="info-card-title">' + item.title + '</p></div>' +
           '<div class="info-card-actions">' +
           (item.deadline ? '<button class="task-complete-btn card-task-complete' + (task && task.completed ? " is-completed" : "") + '" data-complete="' + item.id + '" aria-label="' + (task && task.completed ? "Mark incomplete" : "Mark complete") + '" title="' + (task && task.completed ? "Mark incomplete" : "Mark complete") + '">' + (task && task.completed ? "✓" : "○") + '</button>' : '') +
-          '<button class="info-card-save' + (CB.storage.isSaved("announcement", item.id) ? " is-saved" : "") + '" data-save="' + item.id + '" aria-label="Save">' +
+          '<button class="info-card-save' + (CB.storage.isSaved("announcement", item.id) ? " is-saved" : "") + '" data-save="' + item.id + '" aria-label="Save" title="Save announcement">' +
             (CB.storage.isSaved("announcement", item.id) ? "★" : "☆") +
-          '</button></div>' +
+          '</button>' +
+          (canDelete ? '<button class="announcement-delete-btn" data-delete="' + item.id + '" aria-label="Delete announcement" title="Delete announcement"><span aria-hidden="true">⌫</span><span>Delete</span></button>' : '') +
+          '</div>' +
         '</div>' +
         '<p class="info-card-desc">' + item.description + '</p>' +
         '<div class="info-card-meta">' +
@@ -140,6 +146,44 @@
       });
     });
 
+    container.querySelectorAll("[data-delete]").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var card = btn.closest(".info-card");
+        var titleEl = card ? card.querySelector(".info-card-title") : null;
+        var title = titleEl ? titleEl.textContent : "this announcement";
+        if (!window.confirm("Delete “" + title + "”?\n\nThis will also remove its linked calendar entry.")) return;
+
+        btn.disabled = true;
+        btn.classList.add("is-deleting");
+        CB.api.deleteNotice(btn.dataset.delete).then(function (res) {
+          // Local CR posts should disappear immediately even in demo/local mode.
+          if (res && res.success) {
+            CB.storage.removeCrAnnouncement(btn.dataset.delete);
+            CB.storage.hideAnnouncement(btn.dataset.delete);
+            card.remove();
+            CB.util.toast("Announcement deleted");
+            if (!container.children.length) render();
+            return;
+          }
+          // Demo/sample cards do not exist in the database. A CR can still
+          // remove them from their board on this device.
+          if (res && res.status === 404) {
+            CB.storage.removeCrAnnouncement(btn.dataset.delete);
+            CB.storage.hideAnnouncement(btn.dataset.delete);
+            card.remove();
+            CB.util.toast("Announcement removed from your board");
+            if (!container.children.length) render();
+            return;
+          }
+          btn.disabled = false;
+          btn.classList.remove("is-deleting");
+          CB.util.toast((res && res.error) || "Could not delete announcement");
+        });
+      });
+    });
+
     container.querySelectorAll("[data-complete]").forEach(function (btn) {
       btn.addEventListener("click", function (e) {
         e.preventDefault(); e.stopPropagation();
@@ -158,15 +202,23 @@
   document.addEventListener("cb:task-changed", render);
 
   CB.api.getNotices().then(function (res) {
-    // Keep the polished demo/sample announcements when the database is empty.
     if (res && Array.isArray(res.notices) && res.notices.length) {
-      allAnnouncements = res.notices.map(mapNotice);
-      CB.storage.syncTaskReminders(allAnnouncements, "announcement");
-      render();
-    } else {
-      CB.storage.syncTaskReminders(allAnnouncements, "announcement");
-      render();
+      var apiAnnouncements = res.notices.map(mapNotice);
+      var localAnnouncements = CB.data.getCrAnnouncements().map(function (item) {
+        return Object.assign({}, item, { postedBy: item.postedBy || item.posted_by || profile.id });
+      });
+      var merged = apiAnnouncements.slice();
+      localAnnouncements.concat(CB.data.getAllAnnouncements ? CB.data.getAllAnnouncements() : (CB.data.announcements || [])).forEach(function (item) {
+        var key = String(item.title || "").trim().toLowerCase() + "|" + String(item.deadline || "");
+        var exists = merged.some(function (a) {
+          return String(a.title || "").trim().toLowerCase() + "|" + String(a.deadline || "") === key;
+        });
+        if (!exists) merged.push(item);
+      });
+      allAnnouncements = merged;
     }
+    CB.storage.syncTaskReminders(allAnnouncements, "announcement");
+    render();
   }).catch(function () {
     // API failure must never blank the page.
     CB.storage.syncTaskReminders(allAnnouncements, "announcement");

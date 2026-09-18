@@ -57,14 +57,14 @@
       announcements.filter(function (a) { return a.deadline; }).forEach(function (a) {
         var age = daysBetween(a.deadline, today);
         var task = CB.storage.getTaskState("announcement", a.id);
-        if ((task.completed && age >= 1) || (!task.completed && age >= 1 && age <= 3)) {
+        if ((task.completed && age >= 0) || (!task.completed && age >= 1 && age <= 3)) {
           items.push(Object.assign({}, a, { taskType: "announcement", status: task.completed ? "completed" : "missed", age: age }));
         }
       });
       events.filter(function (e) { return e.actionable && e.deadline; }).forEach(function (e) {
         var age = daysBetween(e.deadline, today);
         var task = CB.storage.getTaskState("event", e.id);
-        if ((task.completed && age >= 1) || (!task.completed && age >= 1 && age <= 3)) {
+        if ((task.completed && age >= 0) || (!task.completed && age >= 1 && age <= 3)) {
           items.push(Object.assign({}, e, { taskType: "event", status: task.completed ? "completed" : "missed", age: age }));
         }
       });

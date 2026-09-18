@@ -136,11 +136,11 @@
       if (!confirmed) return;
       function finishLogout() {
         var taskUid = localStorage.getItem("campusboard.activeUserId") || "guest";
+        var suffix = ".user." + taskUid;
         CB.storage.clearProfile();
-        localStorage.removeItem("campusboard.saved");
-        localStorage.removeItem("campusboard.crAnnouncements");
-        localStorage.removeItem("campusboard.calendarNotes");
-        localStorage.removeItem("campusboard.polaroids");
+        ["campusboard.saved", "campusboard.calendarNotes", "campusboard.polaroids", "campusboard.notifications", "campusboard.crAnnouncements"].forEach(function (key) {
+          localStorage.removeItem(key + suffix);
+        });
         localStorage.removeItem("campusboard.taskStates." + taskUid);
         window.location.href = "index.html";
       }
@@ -157,58 +157,80 @@
   function renderSaved() {
     var saved = CB.storage.getSaved();
     var announcements = CB.data.getAllAnnouncements();
-    var opportunities = CB.data.opportunities;
+    var opportunities = CB.data.opportunities.slice();
     var events = CB.data.getAllEvents();
 
-    var items = [];
-    (saved.announcement || []).forEach(function (id) {
-      var found = announcements.find(function (a) { return a.id === id; });
-      if (found) items.push({ type: "announcement", label: "Announcement", data: found });
-    });
-    (saved.opportunity || []).forEach(function (id) {
-      var found = opportunities.find(function (o) { return o.id === id; });
-      if (found) items.push({ type: "opportunity", label: "Opportunity", data: found });
-    });
-    (saved.event || []).forEach(function (id) {
-      var found = events.find(function (e) { return e.id === id; });
-      if (found) items.push({ type: "event", label: "Event", data: found });
-    });
+    function finishRender() {
+      saved = CB.storage.getSaved();
+      var items = [];
+      (saved.announcement || []).forEach(function (id) {
+        var found = announcements.find(function (a) { return String(a.id) === String(id); });
+        if (found && !CB.storage.isAnnouncementHidden(found.id)) items.push({ type: "announcement", label: "Announcement", data: found });
+      });
+      (saved.opportunity || []).forEach(function (id) {
+        var found = opportunities.find(function (o) { return String(o.id) === String(id); });
+        if (found) items.push({ type: "opportunity", label: "Opportunity", data: found });
+      });
+      (saved.event || []).forEach(function (id) {
+        var found = events.find(function (e) { return String(e.id) === String(id); });
+        if (found) items.push({ type: "event", label: "Event", data: found });
+      });
 
-    document.getElementById("saved-count-line").textContent = items.length + " saved";
-
-    var list = document.getElementById("saved-list");
-    list.innerHTML = "";
-    if (!items.length) {
-      list.innerHTML = '<p class="search-empty">Nothing saved yet — tap ☆ on any card to keep it here.</p>';
-      return;
+      document.getElementById("saved-count-line").textContent = items.length + " saved";
+      var list = document.getElementById("saved-list");
+      list.innerHTML = "";
+      if (!items.length) {
+        list.innerHTML = '<p class="search-empty">Nothing saved yet — tap ☆ on any card to keep it here.</p>';
+        return;
+      }
+      items.forEach(function (entry) {
+        var d = entry.data;
+        var card = document.createElement("div");
+        card.className = "info-card tone-rose";
+        card.innerHTML = '<div class="info-card-head"><div><span class="info-card-tag">' + entry.label + '</span><p class="info-card-title">' + d.title + '</p></div><button class="info-card-save is-saved" data-unsave="' + entry.type + ':' + d.id + '" aria-label="Remove from saved">★</button></div>' +
+          '<p class="info-card-desc">' + (d.description || "") + '</p>' +
+          '<div class="info-card-meta"><span>Deadline: <strong>' + CB.util.formatDate(d.deadline) + '</strong></span><span>Source: <strong>' + (d.source || d.org || "Campus Board") + '</strong></span></div>';
+        card.addEventListener("click", function (e) {
+          if (e.target.closest("[data-unsave]")) return;
+          CB.ui.openDetailModal(Object.assign({}, d, { savedType: entry.type }));
+        });
+        list.appendChild(card);
+      });
+      list.querySelectorAll("[data-unsave]").forEach(function (btn) {
+        btn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          var parts = btn.dataset.unsave.split(":");
+          CB.storage.toggleSaved(parts[0], parts[1]);
+          CB.util.toast("Removed from saved");
+          renderSaved();
+        });
+      });
     }
 
-    items.forEach(function (entry) {
-      var d = entry.data;
-      var title = d.title;
-      var deadline = d.deadline;
-      var source = d.source || d.org;
-
-      var card = document.createElement("div");
-      card.className = "info-card tone-rose";
-      card.innerHTML =
-        '<div class="info-card-head">' +
-          '<div><span class="info-card-tag">' + entry.label + '</span><p class="info-card-title">' + title + '</p></div>' +
-          '<button class="info-card-save is-saved" data-unsave="' + entry.type + ':' + d.id + '" aria-label="Remove from saved">★</button>' +
-        '</div>' +
-        '<div class="info-card-meta"><span>Deadline: <strong>' + CB.util.formatDate(deadline) + '</strong></span><span>Source: <strong>' + source + '</strong></span></div>';
-      list.appendChild(card);
-    });
-
-    list.querySelectorAll("[data-unsave]").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        var parts = btn.dataset.unsave.split(":");
-        CB.storage.toggleSaved(parts[0], parts[1]);
-        CB.util.toast("Removed from saved");
-        renderSaved();
-      });
-    });
+    Promise.all([CB.api.getNotices(), CB.api.getOpportunities(), CB.api.getCalendarEvents()]).then(function (results) {
+      var noticeRes = results[0];
+      if (noticeRes && Array.isArray(noticeRes.notices)) {
+        noticeRes.notices.forEach(function (row) {
+          var item = { id: String(row.id), title: row.title, description: row.description || row.summary || row.content || "", category: row.category ? String(row.category).charAt(0).toUpperCase() + String(row.category).slice(1).toLowerCase() : "General", deadline: row.deadline ? String(row.deadline).slice(0,10) : null, source: row.source || "Campus Board", venue: row.venue || "Not specified", forClass: row.forClass || row.class_name || "All Students", aiGenerated: Boolean(row.aiGenerated || row.ai_generated) };
+          if (!CB.storage.isAnnouncementHidden(item.id) && !announcements.some(function(a){ return String(a.id) === String(item.id); })) announcements.push(item);
+        });
+      }
+      var oppRes = results[1];
+      if (oppRes && Array.isArray(oppRes.opportunities)) {
+        oppRes.opportunities.forEach(function(row) {
+          var item = { id: String(row.id), title: row.title, description: row.description || "", category: row.category || "General", deadline: row.deadline ? String(row.deadline).slice(0,10) : null, source: row.org || "Campus", org: row.org || "Campus", eligibility: row.eligibility || "Not specified" };
+          if (!opportunities.some(function(o){ return String(o.id) === String(item.id); })) opportunities.push(item);
+        });
+      }
+      var eventRes = results[2];
+      if (eventRes && Array.isArray(eventRes.events)) {
+        eventRes.events.forEach(function(row) {
+          var item = { id: String(row.id), title: row.title, description: row.description || "Campus Board calendar item.", date: row.event_date ? String(row.event_date).slice(0,10) : null, deadline: row.event_date ? String(row.event_date).slice(0,10) : null, type: row.category || "event", source: row.location || "Campus Calendar", venue: row.location || "Not specified" };
+          if (!events.some(function(e){ return String(e.id) === String(item.id); })) events.push(item);
+        });
+      }
+      finishRender();
+    }).catch(finishRender);
   }
-
   renderSaved();
 })();

@@ -55,7 +55,16 @@ class Database:
                 cursor.execute("SHOW COLUMNS FROM users LIKE 'password_hash'")
                 if not cursor.fetchone():
                     cursor.execute("ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NOT NULL AFTER college_email")
-                self.connection.commit()
+
+            # Migrate older demo databases so announcement deadlines can be
+            # linked to their automatically-created calendar events.
+            cursor.execute("SHOW TABLES LIKE 'calendar_events'")
+            if cursor.fetchone():
+                cursor.execute("SHOW COLUMNS FROM calendar_events LIKE 'announcement_id'")
+                if not cursor.fetchone():
+                    cursor.execute("ALTER TABLE calendar_events ADD COLUMN announcement_id INT NULL AFTER created_by")
+
+            self.connection.commit()
         except Exception as e:
             logger.warning(f"Schema migration note: {e}")
 

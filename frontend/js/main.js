@@ -20,6 +20,7 @@
     profile: "campusboard.profile",
     saved: "campusboard.saved",
     crAnnouncements: "campusboard.crAnnouncements",
+    deletedAnnouncements: "campusboard.deletedAnnouncements",
     notifications: "campusboard.notifications",
     calendarNotes: "campusboard.calendarNotes",
     polaroids: "campusboard.polaroids",
@@ -56,26 +57,47 @@
     return !!getProfile();
   }
 
+  /* ---------------- per-user local storage ---------------- */
+  // Personal UI state must NEVER be shared between accounts on the same browser.
+  // Community content (announcements/timetable) is intentionally shared through
+  // the backend; saved/completed/profile decorations are scoped to active user.
+  function activeUserStorageId() {
+    var id = localStorage.getItem("campusboard.activeUserId");
+    if (id) return String(id);
+    var profile = getProfile();
+    return profile && profile.id ? String(profile.id) : "guest";
+  }
+
+  function userKey(base) {
+    return base + ".user." + activeUserStorageId();
+  }
+
   /* ---------------- storage: saved items ---------------- */
   // shape: { announcement: ["a1","a3"], opportunity: ["o2"], event: ["e1"] }
 
   function getSaved() {
+    var empty = { announcement: [], opportunity: [], event: [] };
     try {
-      var raw = localStorage.getItem(STORAGE_KEYS.saved);
-      return raw ? JSON.parse(raw) : { announcement: [], opportunity: [], event: [] };
+      var raw = localStorage.getItem(userKey(STORAGE_KEYS.saved));
+      var parsed = raw ? JSON.parse(raw) : empty;
+      ["announcement", "opportunity", "event"].forEach(function (type) {
+        parsed[type] = Array.isArray(parsed[type]) ? parsed[type].map(String) : [];
+      });
+      return parsed;
     } catch (e) {
-      return { announcement: [], opportunity: [], event: [] };
+      return empty;
     }
   }
 
   function isSaved(type, id) {
     var saved = getSaved();
-    return (saved[type] || []).indexOf(id) !== -1;
+    return (saved[type] || []).indexOf(String(id)) !== -1;
   }
 
   function toggleSaved(type, id) {
     var saved = getSaved();
     if (!saved[type]) saved[type] = [];
+    id = String(id);
     var idx = saved[type].indexOf(id);
     var nowSaved;
     if (idx === -1) {
@@ -85,7 +107,7 @@
       saved[type].splice(idx, 1);
       nowSaved = false;
     }
-    localStorage.setItem(STORAGE_KEYS.saved, JSON.stringify(saved));
+    localStorage.setItem(userKey(STORAGE_KEYS.saved), JSON.stringify(saved));
     return nowSaved;
   }
 
@@ -142,7 +164,7 @@
 
   function getCrAnnouncements() {
     try {
-      var raw = localStorage.getItem(STORAGE_KEYS.crAnnouncements);
+      var raw = localStorage.getItem(userKey(STORAGE_KEYS.crAnnouncements));
       return raw ? JSON.parse(raw) : [];
     } catch (e) {
       return [];
@@ -152,8 +174,44 @@
   function addCrAnnouncement(announcement) {
     var list = getCrAnnouncements();
     list.unshift(announcement);
-    localStorage.setItem(STORAGE_KEYS.crAnnouncements, JSON.stringify(list));
+    localStorage.setItem(userKey(STORAGE_KEYS.crAnnouncements), JSON.stringify(list));
     return list;
+  }
+
+  function removeCrAnnouncement(id) {
+    var target = String(id);
+    var list = getCrAnnouncements().filter(function (item) {
+      return String(item.id) !== target;
+    });
+    localStorage.setItem(userKey(STORAGE_KEYS.crAnnouncements), JSON.stringify(list));
+    return list;
+  }
+
+  function getDeletedAnnouncements() {
+    try {
+      var uid = localStorage.getItem("campusboard.activeUserId") || "guest";
+      var raw = localStorage.getItem(STORAGE_KEYS.deletedAnnouncements + "." + uid);
+      return raw ? JSON.parse(raw).map(String) : [];
+    } catch (e) { return []; }
+  }
+
+  function hideAnnouncement(id) {
+    var uid = localStorage.getItem("campusboard.activeUserId") || "guest";
+    var key = STORAGE_KEYS.deletedAnnouncements + "." + uid;
+    var list = getDeletedAnnouncements();
+    id = String(id);
+    if (list.indexOf(id) === -1) list.push(id);
+    localStorage.setItem(key, JSON.stringify(list));
+    // Also remove it from saved items so Profile never shows a deleted card.
+    var saved = getSaved();
+    Object.keys(saved).forEach(function (type) {
+      saved[type] = (saved[type] || []).filter(function (savedId) { return String(savedId) !== id; });
+    });
+    localStorage.setItem(userKey(STORAGE_KEYS.saved), JSON.stringify(saved));
+  }
+
+  function isAnnouncementHidden(id) {
+    return getDeletedAnnouncements().indexOf(String(id)) !== -1;
   }
 
   /* ---------------- storage: calendar notes (student's own) ---------------- */
@@ -161,7 +219,7 @@
 
   function getCalendarNotes() {
     try {
-      var raw = localStorage.getItem(STORAGE_KEYS.calendarNotes);
+      var raw = localStorage.getItem(userKey(STORAGE_KEYS.calendarNotes));
       return raw ? JSON.parse(raw) : [];
     } catch (e) {
       return [];
@@ -172,7 +230,7 @@
     var list = getCalendarNotes();
     note.id = "note-" + Date.now();
     list.push(note);
-    localStorage.setItem(STORAGE_KEYS.calendarNotes, JSON.stringify(list));
+    localStorage.setItem(userKey(STORAGE_KEYS.calendarNotes), JSON.stringify(list));
     return note;
   }
 
@@ -180,13 +238,13 @@
     var list = getCalendarNotes().map(function (n) {
       return n.id === id ? Object.assign({}, n, changes) : n;
     });
-    localStorage.setItem(STORAGE_KEYS.calendarNotes, JSON.stringify(list));
+    localStorage.setItem(userKey(STORAGE_KEYS.calendarNotes), JSON.stringify(list));
     return list;
   }
 
   function deleteCalendarNote(id) {
     var list = getCalendarNotes().filter(function (n) { return n.id !== id; });
-    localStorage.setItem(STORAGE_KEYS.calendarNotes, JSON.stringify(list));
+    localStorage.setItem(userKey(STORAGE_KEYS.calendarNotes), JSON.stringify(list));
     return list;
   }
 
@@ -195,7 +253,7 @@
 
   function getPolaroids() {
     try {
-      var raw = localStorage.getItem(STORAGE_KEYS.polaroids);
+      var raw = localStorage.getItem(userKey(STORAGE_KEYS.polaroids));
       return raw ? JSON.parse(raw) : {};
     } catch (e) {
       return {};
@@ -205,14 +263,14 @@
   function setPolaroidImage(polaroidId, dataUrl) {
     var all = getPolaroids();
     all[polaroidId] = dataUrl;
-    localStorage.setItem(STORAGE_KEYS.polaroids, JSON.stringify(all));
+    localStorage.setItem(userKey(STORAGE_KEYS.polaroids), JSON.stringify(all));
     return all;
   }
 
   function removePolaroidImage(polaroidId) {
     var all = getPolaroids();
     delete all[polaroidId];
-    localStorage.setItem(STORAGE_KEYS.polaroids, JSON.stringify(all));
+    localStorage.setItem(userKey(STORAGE_KEYS.polaroids), JSON.stringify(all));
     return all;
   }
 
@@ -227,9 +285,9 @@
 
   function getNotifications() {
     try {
-      var raw = localStorage.getItem(STORAGE_KEYS.notifications);
+      var raw = localStorage.getItem(userKey(STORAGE_KEYS.notifications));
       if (!raw) {
-        localStorage.setItem(STORAGE_KEYS.notifications, JSON.stringify(DEFAULT_NOTIFICATIONS));
+        localStorage.setItem(userKey(STORAGE_KEYS.notifications), JSON.stringify(DEFAULT_NOTIFICATIONS));
         return DEFAULT_NOTIFICATIONS.slice();
       }
       return JSON.parse(raw);
@@ -243,7 +301,7 @@
       if (n.id === id) n.read = true;
       return n;
     });
-    localStorage.setItem(STORAGE_KEYS.notifications, JSON.stringify(list));
+    localStorage.setItem(userKey(STORAGE_KEYS.notifications), JSON.stringify(list));
     return list;
   }
 
@@ -252,7 +310,7 @@
       n.read = true;
       return n;
     });
-    localStorage.setItem(STORAGE_KEYS.notifications, JSON.stringify(list));
+    localStorage.setItem(userKey(STORAGE_KEYS.notifications), JSON.stringify(list));
     return list;
   }
 
@@ -280,7 +338,7 @@
       notifications.unshift({ id: nid, text: "Reminder — " + item.title + " is due " + (offset === 1 ? "tomorrow" : "soon") + ".", read: false });
       changed = true;
     });
-    if (changed) localStorage.setItem(STORAGE_KEYS.notifications, JSON.stringify(notifications));
+    if (changed) localStorage.setItem(userKey(STORAGE_KEYS.notifications), JSON.stringify(notifications));
     return notifications;
   }
 
@@ -320,9 +378,44 @@
     { id: "e9", title: "Volunteer Teaching Drive", date: "2026-09-25", type: "event", forClass: "All Students" }
   ];
 
+  // Server-owned community announcements loaded for the current authenticated
+  // user. This is shared campus/class content, not personal account state.
+  var COMMUNITY_ANNOUNCEMENTS = [];
+
+  function setCommunityAnnouncements(rows) {
+    COMMUNITY_ANNOUNCEMENTS = Array.isArray(rows) ? rows.map(function (row) {
+      return {
+        id: String(row.id),
+        title: row.title || "Untitled announcement",
+        description: row.description || row.summary || row.content || "",
+        category: String(row.category || "General").replace(/^./, function(c){ return c.toUpperCase(); }),
+        date: String(row.created_at || row.date || "").slice(0,10),
+        deadline: row.deadline ? String(row.deadline).slice(0,10) : null,
+        source: row.source || "Class Representative",
+        forClass: row.forClass || row.class_name || "All Students",
+        priority: row.priority || "medium",
+        postedBy: row.posted_by || row.postedBy || null,
+        venue: row.venue || "Not specified",
+        aiGenerated: Boolean(row.aiGenerated || row.ai_generated),
+        subject: row.subject || null, action: row.action || null, time: row.time || null,
+        tags: row.tags || []
+      };
+    }) : [];
+    return COMMUNITY_ANNOUNCEMENTS;
+  }
+
   function getAllAnnouncements() {
     var crPosted = getCrAnnouncements();
-    return crPosted.concat(SAMPLE_ANNOUNCEMENTS);
+    var hidden = getDeletedAnnouncements();
+    var combined = COMMUNITY_ANNOUNCEMENTS.concat(crPosted).concat(SAMPLE_ANNOUNCEMENTS);
+    var seen = {};
+    return combined.filter(function (item) {
+      if (hidden.indexOf(String(item.id)) !== -1) return false;
+      var key = String(item.title || "").trim().toLowerCase() + "|" + String(item.deadline || "");
+      if (seen[key]) return false;
+      seen[key] = true;
+      return true;
+    });
   }
 
   // Category → event "type" used by the calendar's tone/icon system.
@@ -637,9 +730,14 @@
       initSearch();
       initNotifications();
 
-      if (typeof callback === "function") {
-        callback(res.user);
-      }
+      // Load community data before page-specific rendering so a CR post made
+      // by one account is visible to the correct audience for other accounts.
+      // Personal data is still isolated by active user id in localStorage.
+      api.getNotices().then(function (noticeRes) {
+        if (noticeRes && Array.isArray(noticeRes.notices)) setCommunityAnnouncements(noticeRes.notices);
+      }).catch(function () {}).then(function () {
+        if (typeof callback === "function") callback(res.user);
+      });
     }).catch(function () {
       clearProfile();
       window.location.replace("index.html");
@@ -1011,7 +1109,7 @@
 
   function getCustomPolaroidSlots(groupKey) {
     try {
-      var raw = localStorage.getItem(STORAGE_KEYS.customPolaroids);
+      var raw = localStorage.getItem(userKey(STORAGE_KEYS.customPolaroids));
       var all = raw ? JSON.parse(raw) : {};
       return all[groupKey] || [];
     } catch (e) {
@@ -1020,11 +1118,11 @@
   }
 
   function addCustomPolaroidSlot(groupKey, polaroidId) {
-    var raw = localStorage.getItem(STORAGE_KEYS.customPolaroids);
+    var raw = localStorage.getItem(userKey(STORAGE_KEYS.customPolaroids));
     var all = {};
     try { all = raw ? JSON.parse(raw) : {}; } catch (e) { all = {}; }
     all[groupKey] = (all[groupKey] || []).concat([polaroidId]);
-    localStorage.setItem(STORAGE_KEYS.customPolaroids, JSON.stringify(all));
+    localStorage.setItem(userKey(STORAGE_KEYS.customPolaroids), JSON.stringify(all));
   }
 
   function buildPolaroidElement(polaroidId, caption, rotDeg) {
@@ -1086,16 +1184,27 @@
 
   /* ---------------- Backend API Layer ---------------- */
 
-  var API_BASE = "";
+  var API_BASE = (global.CB_API_BASE || "").replace(/\/$/, "");
 
   var api = {
     register: function(data) {
       return fetch(API_BASE + "/api/auth/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
         credentials: "include",
         body: JSON.stringify(data)
-      }).then(function(r) { return r.json(); });
+      }).then(function(r) {
+        return r.text().then(function(raw) {
+          var body = {};
+          try { body = raw ? JSON.parse(raw) : {}; } catch (e) { body = {}; }
+          if (!r.ok) {
+            return Object.assign({}, body, { error: body.error || ("Registration failed (" + r.status + ")") , status: r.status });
+          }
+          return body;
+        });
+      }).catch(function() {
+        return { error: "Could not connect to the Campus Board server. Start Flask or check the deployed backend URL." };
+      });
     },
     login: function(credentials) {
       return fetch(API_BASE + "/api/auth/login", {
@@ -1145,6 +1254,27 @@
         return r.json();
       })
       .catch(function() { return null; });
+    },
+    deleteNotice: function(id) {
+      return fetch(API_BASE + "/api/notices/" + encodeURIComponent(id), {
+        method: "DELETE",
+        credentials: "include"
+      }).then(function(r) {
+        if (r.status === 403) {
+          toast("Only the Class Representative who posted it can delete it.");
+          return { error: "CR access required", status: 403 };
+        }
+        if (r.status === 401) {
+          clearProfile();
+          window.location.replace("index.html");
+          return { error: "Authentication required", status: 401 };
+        }
+        return r.text().then(function(raw) {
+          var body = {};
+          try { body = raw ? JSON.parse(raw) : {}; } catch (e) {}
+          return Object.assign({}, body, { status: r.status });
+        });
+      }).catch(function() { return null; });
     },
     getOpportunities: function() {
       return fetch(API_BASE + "/api/opportunities", { credentials: "include" })
@@ -1423,6 +1553,7 @@
       clearProfile: clearProfile,
       hasProfile: hasProfile,
       getSaved: getSaved,
+      activeUserStorageId: activeUserStorageId,
       isSaved: isSaved,
       toggleSaved: toggleSaved,
       savedCount: savedCount,
@@ -1433,6 +1564,9 @@
       taskIsActionable: taskIsActionable,
       getCrAnnouncements: getCrAnnouncements,
       addCrAnnouncement: addCrAnnouncement,
+      removeCrAnnouncement: removeCrAnnouncement,
+      hideAnnouncement: hideAnnouncement,
+      isAnnouncementHidden: isAnnouncementHidden,
       getNotifications: getNotifications,
       markNotificationRead: markNotificationRead,
       markAllNotificationsRead: markAllNotificationsRead,
@@ -1451,6 +1585,7 @@
       opportunities: SAMPLE_OPPORTUNITIES,
       events: SAMPLE_EVENTS,
       getAllAnnouncements: getAllAnnouncements,
+      setCommunityAnnouncements: setCommunityAnnouncements,
       getAllEvents: getAllEvents,
       timetable: SAMPLE_TIMETABLE
     },

@@ -251,3 +251,36 @@
   .timetable-paper-top{align-items:flex-start;flex-direction:column}
   .timetable-week{min-width:820px;grid-template-columns:repeat(5,minmax(155px,1fr));gap:9px}
 }
+
+/* ---------------- CR ANNOUNCEMENT CONTROLS ---------------- */
+.info-card-actions { align-items: center; }
+.announcement-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 1px solid rgba(162, 63, 57, .18);
+  border-radius: 999px;
+  background: rgba(255, 249, 246, .82);
+  color: #9a403b;
+  font: 600 .68rem var(--font-body);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(54,43,29,.05);
+  transition: transform .16s ease, background .16s ease, border-color .16s ease, opacity .16s ease;
+}
+.announcement-delete-btn span:first-child { font-size: .9rem; line-height: 1; }
+.announcement-delete-btn:hover {
+  background: #f4e5e2;
+  border-color: rgba(162, 63, 57, .34);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(162,63,57,.10);
+}
+.announcement-delete-btn:focus-visible { outline: 2px solid #a23f39; outline-offset: 2px; }
+.announcement-delete-btn:disabled { cursor: wait; opacity: .55; transform: none; }
+.announcement-delete-btn.is-deleting span:last-child { font-size: 0; }
+.announcement-delete-btn.is-deleting span:last-child::after { content: 'Deleting…'; font-size: .68rem; }
+@media (max-width: 520px) {
+  .announcement-delete-btn span:last-child { display: none; }
+  .announcement-delete-btn { width: 30px; justify-content: center; padding: 5px; }
+}

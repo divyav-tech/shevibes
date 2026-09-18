@@ -194,9 +194,8 @@
           finishButton.disabled = false;
           finishButton.textContent = "Enter my board →";
 
-          if (res && (res.user || res.message)) {
-            var userProfile = res.user || payload;
-            CB.storage.saveProfile(userProfile);
+          if (res && res.user) {
+            CB.storage.saveProfile(res.user);
             closeBoard();
             window.location.href = "dashboard.html";
           } else if (res && res.error) {

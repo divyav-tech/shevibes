@@ -30,7 +30,7 @@ class CampusAI:
     def is_available(self):
         return self.client is not None
 
-    def generate_json(self, prompt, schema=None, model="gemini-3.6-flash"):
+    def generate_json(self, prompt, schema=None, model="gemini-3.8-flash"):
         """
         Generates structured JSON using Gemini SDK.
         Returns parsed dict/list or None if error/unavailable.
@@ -69,7 +69,7 @@ class CampusAI:
             if model != "gemini-3.6-flash":
                 try:
                     response = self.client.models.generate_content(
-                        model="gemini-3.6-flash",
+                        model="gemini-3.8-flash",
                         contents=prompt,
                         config=config
                     )
@@ -79,31 +79,62 @@ class CampusAI:
                     logger.error(f"Gemini JSON retry failed: {retry_error}")
             return None
 
-    def generate_json_with_image(self, prompt, image_bytes, mime_type="image/png", schema=None, model="gemini-3.6-flash"):
-        """Generate structured JSON from an image plus prompt (used for timetable OCR)."""
+    def generate_json_with_image(self, prompt, image_bytes, mime_type="image/png", schema=None, model="gemini-3.8-flash"):
+        """Generate structured JSON from an image.
+
+        Timetable photos are visually noisy, so use a small model fallback chain
+        and let the caller receive a clean JSON object rather than raw prose.
+        """
         if not self.is_available():
             return None
+
         try:
             from google.genai import types
-            config = types.GenerateContentConfig(response_mime_type="application/json")
-            if schema:
-                config.response_schema = schema
-            contents = [prompt, types.Part.from_bytes(data=image_bytes, mime_type=mime_type)]
-            response = self.client.models.generate_content(model=model, contents=contents, config=config)
-            if response and response.text:
-                cleaned = response.text.strip()
-                if cleaned.startswith("```json"):
-                    cleaned = cleaned[7:]
-                if cleaned.startswith("```"):
-                    cleaned = cleaned[3:]
-                if cleaned.endswith("```"):
-                    cleaned = cleaned[:-3]
-                return json.loads(cleaned.strip())
         except Exception as e:
-            logger.error("Gemini image JSON error: %s", e)
+            logger.error("Google GenAI SDK unavailable: %s", e)
+            return None
+
+        models = []
+        for name in (model, "gemini-3.6-flash", "gemini-3.5-flash"):
+            if name and name not in models:
+                models.append(name)
+
+        last_error = None
+        for model_name in models:
+            try:
+                config = types.GenerateContentConfig(
+                    response_mime_type="application/json"
+                )
+                if schema:
+                    config.response_schema = schema
+
+                contents = [prompt, types.Part.from_bytes(data=image_bytes, mime_type=mime_type)]
+                response = self.client.models.generate_content(
+                    model=model_name,
+                    contents=contents,
+                    config=config
+                )
+                if response and response.text:
+                    cleaned = response.text.strip()
+                    if cleaned.startswith("```json"):
+                        cleaned = cleaned[7:]
+                    elif cleaned.startswith("```"):
+                        cleaned = cleaned[3:]
+                    if cleaned.endswith("```"):
+                        cleaned = cleaned[:-3]
+                    parsed = json.loads(cleaned.strip())
+                    if isinstance(parsed, dict):
+                        logger.info("Image extraction succeeded with %s", model_name)
+                        return parsed
+            except Exception as e:
+                last_error = e
+                logger.warning("Gemini image extraction failed with %s: %s", model_name, e)
+
+        if last_error:
+            logger.error("All Gemini timetable extraction attempts failed: %s", last_error)
         return None
 
-    def generate_text(self, prompt, model="gemini-3.6-flash"):
+    def generate_text(self, prompt, model="gemini-3.8-flash"):
         """
         Generates text output using Gemini SDK.
         """
