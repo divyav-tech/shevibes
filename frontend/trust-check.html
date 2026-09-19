@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trust Check — Campus Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Archivo:wght@400;500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/dashboard.css">
+<link rel="stylesheet" href="css/pages.css">
+</head>
+<body class="app-body">
+
+<header class="app-header">
+  <div class="app-header-inner">
+    <a class="wordmark" href="dashboard.html">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <circle cx="10" cy="6" r="3" fill="#B97D7B"/>
+        <circle cx="6" cy="11" r="3" fill="#B97D7B"/>
+        <circle cx="14" cy="11" r="3" fill="#DDD3C9"/>
+        <circle cx="10" cy="14" r="2.4" fill="#7E745B"/>
+      </svg>
+      Campus Board
+    </a>
+
+    <nav class="main-nav" id="app-nav">
+      <a href="dashboard.html">Home</a>
+      <a href="announcements.html">Announcements</a>
+      <a href="opportunities.html">Opportunities</a>
+      <a href="calendar.html">Calendar</a>
+      <a href="timetable.html">Timetable</a>
+      <a href="trust-check.html" class="is-current">🛡️ Trust Check</a>
+      <a href="past-events.html">Past Events</a>
+      <a href="profile.html">My Profile</a>
+    </nav>
+
+    <div class="app-header-actions">
+      <div class="app-search">
+        <input type="search" id="global-search" placeholder="Search announcements, opportunities…" aria-label="Search Campus Board">
+        <div class="app-search-results" id="search-results" hidden></div>
+      </div>
+      <div class="app-notif">
+        <button class="notif-btn" id="notif-btn" aria-haspopup="true" aria-expanded="false" aria-label="Notifications">
+          🔔<span class="notif-dot" id="notif-dot" hidden></span>
+        </button>
+        <div class="notif-dropdown" id="notif-dropdown" hidden>
+          <div class="notif-dropdown-head"><span>Notifications</span><button type="button" id="notif-mark-all">Mark all as read</button></div>
+          <div class="notif-list" id="notif-list"></div>
+        </div>
+      </div>
+      <a class="app-avatar" href="profile.html" id="app-avatar">S</a>
+      <button class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="app-nav" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="dash-main">
+
+  <div class="page-head">
+    <span class="hand-note">received a campus message you're unsure about?</span>
+    <h1>🛡️ Trust Check</h1>
+    <p>Check forwarded messages, emails, or screenshots to spot potential warning signs and get clear steps to verify independently.</p>
+  </div>
+
+  <!-- INPUT CARD -->
+  <section class="tc-card">
+    <span class="tape tape-top"></span>
+
+    <div class="tc-tabs" role="tablist">
+      <button type="button" class="tc-tab-btn is-active" id="tab-paste" role="tab" aria-selected="true" aria-controls="panel-paste">
+        Paste Message
+      </button>
+      <button type="button" class="tc-tab-btn" id="tab-upload" role="tab" aria-selected="false" aria-controls="panel-upload">
+        Upload Screenshot
+      </button>
+    </div>
+
+    <!-- PANEL 1: PASTE MESSAGE -->
+    <div id="panel-paste" role="tabpanel">
+      <label for="tc-text-input" class="sr-only">Paste Message Text</label>
+      <textarea id="tc-text-input" class="tc-textarea" placeholder="Paste forwarded message, email, or announcement text here..."></textarea>
+    </div>
+
+    <!-- PANEL 2: UPLOAD SCREENSHOT -->
+    <div id="panel-upload" role="tabpanel" hidden>
+      <div class="tc-dropzone" id="tc-dropzone">
+        <div class="tc-dropzone-icon">📷</div>
+        <p>Click or drag & drop a screenshot here</p>
+        <small>Supports PNG, JPG, WEBP (Max 8MB)</small>
+        <input type="file" id="tc-file-input" accept="image/*" style="display:none;">
+        <img id="tc-img-preview" class="tc-img-preview" hidden alt="Screenshot preview">
+      </div>
+    </div>
+
+    <!-- OPTIONAL METADATA -->
+    <div class="tc-meta-grid">
+      <div class="tc-meta-field">
+        <label for="tc-where">Where did you receive this? (Optional)</label>
+        <input type="text" id="tc-where" placeholder="e.g. WhatsApp, Email, Instagram, Class Group">
+      </div>
+      <div class="tc-meta-field">
+        <label for="tc-who-sent">Who sent / posted it? (Optional)</label>
+        <input type="text" id="tc-who-sent" placeholder="e.g. Forwarded from unknown number, CR, Friend">
+      </div>
+      <div class="tc-meta-field">
+        <label for="tc-who-issued">Who supposedly issued it? (Optional)</label>
+        <input type="text" id="tc-who-issued" placeholder="e.g. Exam Cell, Physics HOD, College Society">
+      </div>
+    </div>
+
+    <!-- MANDATORY PRIVACY WARNING -->
+    <div class="tc-privacy-warning">
+      <span>🔒</span>
+      <span><strong>Privacy Note:</strong> Don't upload passwords, OTPs, payment credentials, or unnecessary personal information.</span>
+    </div>
+
+    <!-- SUBMIT BUTTON -->
+    <div style="margin-top: 16px; text-align: right;">
+      <button type="button" class="btn btn-primary" id="tc-submit-btn">
+        <span>Check Message →</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- LOADING SPINNER / CARD -->
+  <div id="tc-loading" class="tc-card" hidden style="text-align: center; padding: 40px 20px;">
+    <p class="hand-note" style="font-size: 1.3rem; margin-bottom: 8px;">analyzing message details...</p>
+    <p style="color: var(--color-text-muted); font-size: 0.9rem;">Checking indicators, references, and safety signals...</p>
+  </div>
+
+  <!-- RESULTS SECTION -->
+  <section id="tc-results" class="tc-card" hidden>
+    <span class="pin"></span>
+
+    <!-- HEADER / RISK ASSESSMENT BADGE -->
+    <div class="tc-result-head">
+      <div>
+        <span class="hand-note" style="display:block; margin-bottom: 4px;">risk assessment</span>
+        <div id="tc-risk-badge" class="tc-risk-badge">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <p id="tc-summary" class="tc-summary-text"></p>
+
+    <!-- FALLBACK NOTICE BANNER (Only shown when Gemini failed / was unavailable) -->
+    <div id="tc-fallback-notice" class="tc-fallback-banner" hidden>
+      <span class="tape tape-top"></span>
+      <p><strong>⚠️ AI analysis is currently unavailable.</strong> We've performed a basic safety check using predefined warning indicators. Independently verify the announcement before acting on it.</p>
+    </div>
+
+    <!-- POTENTIAL RED FLAGS -->
+    <div id="tc-red-flags-section">
+      <h2 class="tc-section-title">🚩 Potential Red Flags</h2>
+      <div id="tc-red-flags-list">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- WHAT WE KNOW (Extracted Details) -->
+    <h2 class="tc-section-title">📌 What We Know</h2>
+    <div class="tc-known-grid">
+      <div class="tc-known-item">
+        <span>Claimed Issuer</span>
+        <strong id="tc-detail-issuer">Not specified</strong>
+      </div>
+      <div class="tc-known-item">
+        <span>Deadline / Date</span>
+        <strong id="tc-detail-deadline">Not specified</strong>
+      </div>
+      <div class="tc-known-item">
+        <span>Fee / Payment</span>
+        <strong id="tc-detail-fee">Not specified</strong>
+      </div>
+      <div class="tc-known-item">
+        <span>Venue / Location</span>
+        <strong id="tc-detail-venue">Not specified</strong>
+      </div>
+      <div class="tc-known-item">
+        <span>Action / Link</span>
+        <strong id="tc-detail-link">Not specified</strong>
+      </div>
+      <div class="tc-known-item">
+        <span>Source</span>
+        <strong id="tc-detail-source">Not specified</strong>
+      </div>
+    </div>
+
+    <!-- WHAT COULD NOT BE VERIFIED -->
+    <div id="tc-unverified-section">
+      <h2 class="tc-section-title">❓ What Could Not Be Verified</h2>
+      <ul id="tc-unverified-list" class="tc-unverified-list">
+        <!-- Populated by JS -->
+      </ul>
+    </div>
+
+    <!-- HOW TO VERIFY -->
+    <h2 class="tc-section-title">🔍 How To Verify Independently</h2>
+    <ol id="tc-steps-list" class="tc-steps-list">
+      <!-- Populated by JS -->
+    </ol>
+
+    <!-- ACTIONS BAR (REPORT) -->
+    <div class="tc-actions-bar">
+      <small style="color: var(--color-text-muted);">Antigravity AI Trust System · Always verify critical campus notices independently.</small>
+      <button type="button" class="btn btn-secondary btn-small" id="tc-report-trigger">
+        🚨 Report This Message
+      </button>
+    </div>
+  </section>
+
+</main>
+
+<!-- REPORT MODAL -->
+<div id="tc-report-modal" class="tc-modal-overlay" hidden>
+  <div class="tc-modal-card">
+    <span class="tape tape-top"></span>
+    <h3>Report This Message</h3>
+    <p>Help protect fellow students by flagging suspicious or misleading notices.</p>
+
+    <div style="margin-bottom: 14px;">
+      <label for="tc-report-reason" style="display:block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-muted); margin-bottom: 4px;">Reason for reporting (Optional)</label>
+      <textarea id="tc-report-reason" class="tc-textarea" style="min-height: 80px;" placeholder="e.g. Asking for money, fake exam date, impersonating faculty..."></textarea>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap: 10px;">
+      <button type="button" class="btn btn-ghost btn-small" id="tc-report-cancel">Cancel</button>
+      <button type="button" class="btn btn-primary btn-small" id="tc-report-submit">Submit Report</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/main.js"></script>
+<script src="js/trust-check.js"></script>
+</body>
+</html>
